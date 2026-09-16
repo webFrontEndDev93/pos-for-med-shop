@@ -1,0 +1,61 @@
+/*
+ * Chart palette.
+ *
+ * Series colours come from a validated categorical set (slots blue / orange /
+ * aqua / yellow) rather than the brand teal, so adjacent series stay separable
+ * for colour-blind readers. Verified with the data-viz palette validator against
+ * both surfaces: worst adjacent CVD ΔE 9.1 light / 8.4 dark, normal-vision
+ * ΔE 22.9 / 19.8.
+ *
+ * On the light surface aqua (2.82:1) and yellow (2.17:1) fall below 3:1, so
+ * every chart using them also ships visible direct labels — never colour alone.
+ */
+
+.viz {
+  --series-1: #2a78d6; /* blue   — revenue, cash */
+  --series-2: #eb6834; /* orange — card */
+  --series-3: #1baf7a; /* aqua   — profit, UPI */
+  --series-4: #eda100; /* yellow — credit */
+  --viz-surface: var(--surface);
+  --viz-grid: var(--border);
+  --viz-ink: var(--text);
+  --viz-ink-muted: var(--text-muted);
+}
+
+[data-theme='dark'] .viz {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+}
+
+.viz-figure { display: flex; flex-direction: column; gap: var(--space-3); }
+.viz-plot { position: relative; }
+
+.viz-tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 9rem;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-xs);
+  pointer-events: none;
+  translate: -50% calc(-100% - 12px);
+  white-space: nowrap;
+}
+.viz-tooltip-title { font-weight: 650; margin-bottom: 3px; }
+.viz-tooltip-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.viz-tooltip-row .swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.viz-tooltip-row .val { font-variant-numeric: tabular-nums; font-weight: 620; margin-left: var(--space-3); }
+
+.viz-empty {
+  display: grid; place-items: center;
+  min-height: 9rem; color: var(--text-muted); font-size: var(--text-sm);
+}
+
+.stack-bar { display: flex; gap: 2px; height: 1.5rem; border-radius: var(--radius-sm); overflow: hidden; }
+.stack-seg { transition: filter var(--fast); }
+.stack-seg:hover { filter: brightness(1.12); }

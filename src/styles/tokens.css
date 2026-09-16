@@ -1,0 +1,143 @@
+/*
+ * MediPOS design tokens.
+ *
+ * Fonts are deliberately system-only: the shop counter may have no internet,
+ * and a webfont round-trip is the last thing a till screen needs.
+ */
+
+:root {
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', 'Noto Sans', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.875rem;
+  --text-2xl: 2.5rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --sidebar-w: 15rem;
+  --sidebar-w-collapsed: 4.25rem;
+  --topbar-h: 3.75rem;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --fast: 120ms var(--ease);
+  --normal: 220ms var(--ease);
+
+  /* Brand: a clinical teal — reads as health without the tired hospital blue. */
+  --brand-h: 173;
+  --brand-s: 80%;
+}
+
+/* ------------------------------------------------------------------ light */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f4f6f8;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f8fafb;
+  --surface-3: #eef1f5;
+  --surface-hover: #f1f5f8;
+  --overlay: rgba(15, 23, 32, 0.45);
+
+  --border: #e2e7ec;
+  --border-strong: #cfd7df;
+  --border-focus: hsl(var(--brand-h) var(--brand-s) 34%);
+
+  --text: #101a22;
+  --text-secondary: #4a5a68;
+  --text-muted: #77879a;
+  --text-inverse: #ffffff;
+
+  --brand: hsl(var(--brand-h) var(--brand-s) 30%);
+  --brand-hover: hsl(var(--brand-h) var(--brand-s) 25%);
+  --brand-text: hsl(var(--brand-h) var(--brand-s) 26%);
+  --brand-soft: hsl(var(--brand-h) 60% 95%);
+  --brand-border: hsl(var(--brand-h) 45% 82%);
+
+  --success: #15803d;
+  --success-soft: #e8f6ed;
+  --success-border: #b4e0c4;
+  --warning: #a4580a;
+  --warning-soft: #fdf3e3;
+  --warning-border: #f0d5a8;
+  --danger: #be2323;
+  --danger-soft: #fdeceb;
+  --danger-border: #f4c2bf;
+  --info: #1d4ed8;
+  --info-soft: #eaf0fe;
+  --info-border: #c2d3f8;
+
+  --shadow-xs: 0 1px 2px rgba(16, 26, 34, 0.06);
+  --shadow-sm: 0 1px 3px rgba(16, 26, 34, 0.08), 0 1px 2px rgba(16, 26, 34, 0.04);
+  --shadow: 0 4px 12px rgba(16, 26, 34, 0.08), 0 1px 3px rgba(16, 26, 34, 0.05);
+  --shadow-lg: 0 16px 40px rgba(16, 26, 34, 0.14), 0 4px 12px rgba(16, 26, 34, 0.07);
+  --shadow-focus: 0 0 0 3px hsl(var(--brand-h) 70% 45% / 0.22);
+}
+
+/* ------------------------------------------------------------------- dark */
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0b1016;
+  --bg-elevated: #121a22;
+  --surface: #121a22;
+  --surface-2: #17212b;
+  --surface-3: #1e2a36;
+  --surface-hover: #1c2733;
+  --overlay: rgba(3, 7, 11, 0.66);
+
+  --border: #22303d;
+  --border-strong: #32434f;
+  --border-focus: hsl(var(--brand-h) 60% 52%);
+
+  --text: #e6eef4;
+  --text-secondary: #a8bac8;
+  --text-muted: #72879a;
+  --text-inverse: #06111a;
+
+  --brand: hsl(var(--brand-h) 62% 42%);
+  --brand-hover: hsl(var(--brand-h) 62% 48%);
+  --brand-text: hsl(var(--brand-h) 65% 62%);
+  --brand-soft: hsl(var(--brand-h) 55% 16%);
+  --brand-border: hsl(var(--brand-h) 45% 28%);
+
+  --success: #4ade80;
+  --success-soft: #0e2a1b;
+  --success-border: #1d5236;
+  --warning: #fbbf24;
+  --warning-soft: #2e2107;
+  --warning-border: #5b431166;
+  --danger: #f87171;
+  --danger-soft: #331314;
+  --danger-border: #5f2426;
+  --info: #7aa5fb;
+  --info-soft: #13203d;
+  --info-border: #24396b;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.62);
+  --shadow-focus: 0 0 0 3px hsl(var(--brand-h) 60% 50% / 0.3);
+}

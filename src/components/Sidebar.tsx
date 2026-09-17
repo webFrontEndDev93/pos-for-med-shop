@@ -28,7 +28,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: SidebarProps) {
-  const { settings, alerts, theme, toggleTheme, isAdmin, role, elevatedFor, dropElevation } = useStore();
+  const { settings, alerts, theme, toggleTheme, isAdmin, user, elevatedFor, elevatedBy, dropElevation } = useStore();
   const stockWarnings = alerts.lowStock.length + alerts.expired.length;
 
   return (
@@ -70,24 +70,32 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: Side
       </nav>
 
       <div className="sidebar-foot">
-        {role === 'staff' && (
-          elevatedFor > 0 ? (
-            <button
-              type="button"
-              className="role-chip role-chip--elevated"
-              onClick={() => void dropElevation()}
-              title="End owner access now"
-            >
-              <Icon name="shield" size={13} />
-              {!collapsed && <span className="grow">Owner access · {elevatedFor}s</span>}
-            </button>
-          ) : (
-            <span className="role-chip" title="Signed in with the counter passcode">
-              <Icon name="user" size={13} />
-              {!collapsed && <span className="grow">Counter</span>}
-            </span>
-          )
-        )}
+        {elevatedFor > 0 ? (
+          <button
+            type="button"
+            className="role-chip role-chip--elevated"
+            onClick={() => void dropElevation()}
+            title={`Owner access approved by ${elevatedBy ?? 'the owner'} — click to end it now`}
+          >
+            <Icon name="shield" size={13} />
+            {!collapsed && <span className="grow truncate">{elevatedBy ?? 'Owner'} · {elevatedFor}s</span>}
+          </button>
+        ) : user ? (
+          <span
+            className="role-chip"
+            title={`Signed in as ${user.name} (${user.role === 'admin' ? 'owner' : 'counter'})`}
+          >
+            <Icon name={user.role === 'admin' ? 'shield' : 'user'} size={13} />
+            {!collapsed && (
+              <span className="grow truncate">
+                {user.name}
+                <span className="muted" style={{ fontWeight: 500 }}>
+                  {' · '}{user.role === 'admin' ? 'owner' : 'counter'}
+                </span>
+              </span>
+            )}
+          </span>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"

@@ -97,6 +97,29 @@ export interface SaleItem {
 /** `credit` is udhaar — the bill goes on the customer's account, not a card. */
 export type PaymentMode = 'cash' | 'card' | 'digital' | 'credit';
 
+export interface User {
+  id: string;
+  name: string;
+  role: 'admin' | 'staff';
+  active: boolean;
+  createdAt?: string;
+  lastSignInAt?: string | null;
+}
+
+export interface AuditEntry {
+  id: string;
+  at: string;
+  action: string;
+  summary: string;
+  by: string;
+  byId: string | null;
+  role: 'admin' | 'staff' | null;
+  /** Set when the action went through a manager override. */
+  authorisedBy: string | null;
+  invoiceNo?: string;
+  amount?: number;
+}
+
 export interface Sale {
   id: string;
   invoiceNo: string;
@@ -122,7 +145,14 @@ export interface Sale {
   prescriptionRef: string;
   note: string;
   status: 'completed' | 'void';
+  /** Who was at the till. Kept as a name so the bill never changes retroactively. */
+  soldBy?: string;
+  soldById?: string | null;
   voidedAt?: string;
+  voidedBy?: string;
+  voidedById?: string | null;
+  /** The owner who approved the cancellation, when done under a manager override. */
+  voidedAuthorisedBy?: string | null;
 }
 
 export interface Payment {
@@ -184,6 +214,7 @@ export interface ReportSummary {
   byDay: { day: string; revenue: number; profit: number; bills: number }[];
   topProducts: { productId: string; name: string; qty: number; revenue: number; profit: number }[];
   byPaymentMode: { mode: PaymentMode; amount: number; bills: number }[];
+  byUser: { name: string; revenue: number; bills: number; items: number }[];
   byHour: { hour: number; revenue: number; bills: number }[];
   stockValue: number;
   creditOutstanding: number;

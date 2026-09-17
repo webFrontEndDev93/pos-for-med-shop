@@ -41,6 +41,7 @@ export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) 
       <div>Customer: {sale.customerName || 'Walk-in'}</div>
       {sale.doctorName && <div>Doctor: {sale.doctorName}</div>}
       {sale.prescriptionRef && <div>Rx Ref: {sale.prescriptionRef}</div>}
+      {sale.soldBy && <div>Served by: {sale.soldBy}</div>}
 
       <hr className="receipt-rule" />
 

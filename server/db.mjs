@@ -66,6 +66,7 @@ export function emptyDb() {
     customers: [],
     sales: [],
     payments: [],
+    audit: [],
   };
 }
 

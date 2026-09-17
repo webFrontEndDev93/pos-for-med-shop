@@ -1,5 +1,6 @@
 import type {
-  Alerts, Batch, Bootstrap, Customer, Payment, Product, ReportSummary, Sale, Settings,
+  Alerts, AuditEntry, Batch, Bootstrap, Customer, Payment, Product, ReportSummary,
+  Sale, Settings, User,
 } from './types';
 
 /** Error carrying the server's human-readable message, so the UI can just show it. */
@@ -63,12 +64,14 @@ export type Role = 'admin' | 'staff';
 export interface AuthStatus {
   required: boolean;
   configured: boolean;
-  hasStaffPasscode: boolean;
   authenticated: boolean;
+  user: { id: string; name: string; role: Role } | null;
   role: Role | null;
   isAdmin: boolean;
   elevatedForSeconds: number;
+  elevatedBy: string | null;
   elevationSeconds: number;
+  userCount: number;
   minLength: number;
   lockedForSeconds: number;
 }
@@ -83,14 +86,20 @@ export interface BackupListing {
 
 export const api = {
   authStatus: () => request<AuthStatus>('/auth/status'),
-  authSetup: (passcode: string, staffPasscode: string) =>
-    post<{ ok: true; role: Role }>('/auth/setup', { passcode, staffPasscode }),
-  authLogin: (passcode: string) => post<{ ok: true; role: Role }>('/auth/login', { passcode }),
+  authSetup: (body: { name: string; passcode: string; staffName: string; staffPasscode: string }) =>
+    post<{ ok: true; user: User }>('/auth/setup', body),
+  authLogin: (passcode: string) => post<{ ok: true; user: User }>('/auth/login', { passcode }),
   authLogout: () => post<{ ok: true }>('/auth/logout'),
-  authChange: (current: string, next: string, role: Role) =>
-    post<{ ok: true; role: Role }>('/auth/change', { current, next, role }),
   authElevate: (passcode: string) =>
-    post<{ ok: true; elevatedForSeconds: number }>('/auth/elevate', { passcode }),
+    post<{ ok: true; elevatedForSeconds: number; approvedBy: string }>('/auth/elevate', { passcode }),
+
+  users: () => request<User[]>('/users'),
+  createUser: (body: { name: string; role: Role; passcode: string }) => post<User>('/users', body),
+  updateUser: (id: string, body: Partial<User> & { passcode?: string }) => put<User>(`/users/${id}`, body),
+  deleteUser: (id: string) => del<{ id: string }>(`/users/${id}`),
+
+  audit: (query: Record<string, string> = {}) =>
+    request<AuditEntry[]>(`/audit?${new URLSearchParams(query)}`),
   authDropElevation: () => post<{ ok: true }>('/auth/drop-elevation'),
 
   backups: () => request<BackupListing>('/backups'),

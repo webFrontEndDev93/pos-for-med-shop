@@ -1,6 +1,9 @@
 import { readDb, writeDb, replaceDb, id, DEFAULT_TAX_RATES } from './db.mjs';
 import { runBackup, listBackups } from './backup.mjs';
 import {
+  listUsers, createUser, updateUser, deleteUser, destroySessionsFor,
+} from './auth.mjs';
+import {
   round2,
   todayISO,
   daysUntil,
@@ -113,6 +116,37 @@ function normaliseTaxRates(input) {
   return cleaned.length > 0 ? cleaned : DEFAULT_TAX_RATES.map((r) => ({ ...r }));
 }
 
+/* --------------------------------------------------------------- audit log */
+
+const AUDIT_LIMIT = 5000;
+
+/** Money in log lines should read like money, not like a bare number. */
+const asMoney = (db, amount) => `${db.settings?.currencySymbol ?? 'Rs'} ${round2(amount).toFixed(2)}`;
+
+/**
+ * Records who did something that matters — a cancelled bill, a price change, a
+ * new person on the till. Kept in db.json so it travels with the backups, and
+ * capped so a long-running shop cannot grow it without bound.
+ *
+ * `authorisedBy` is set when the action went through a manager override, so the
+ * log says both who did it and whose authority they used.
+ */
+function audit(db, actor, action, summary, detail = {}) {
+  if (!Array.isArray(db.audit)) db.audit = [];
+  db.audit.unshift({
+    id: id('log'),
+    at: new Date().toISOString(),
+    action,
+    summary,
+    by: actor?.name ?? 'Unknown',
+    byId: actor?.id ?? null,
+    role: actor?.role ?? null,
+    authorisedBy: actor?.authorisedBy?.name ?? null,
+    ...detail,
+  });
+  if (db.audit.length > AUDIT_LIMIT) db.audit.length = AUDIT_LIMIT;
+}
+
 /* ------------------------------------------------------------------ checkout */
 
 /**
@@ -120,7 +154,7 @@ function normaliseTaxRates(input) {
  * decrements the batches it draws from, and recomputes all money server-side so
  * a tampered or stale client can never decide the bill.
  */
-function createSale(db, body) {
+function createSale(db, body, actor) {
   const items = Array.isArray(body.items) ? body.items : [];
   if (items.length === 0) throw bad('Cannot bill an empty cart.');
 
@@ -209,6 +243,10 @@ function createSale(db, body) {
     prescriptionRef,
     note: str(body.note),
     status: 'completed',
+    // Who was at the till. Denormalised on purpose: the bill must keep saying
+    // this even if the person is later renamed or removed.
+    soldBy: actor?.name ?? 'Unknown',
+    soldById: actor?.id ?? null,
   };
 
   db.settings.nextInvoiceSeq = (db.settings.nextInvoiceSeq ?? 1) + 1;
@@ -218,7 +256,7 @@ function createSale(db, body) {
 }
 
 /** Reverses a sale: puts stock back and clears any credit it created. */
-function voidSale(db, saleId) {
+function voidSale(db, saleId, actor) {
   const sale = db.sales.find((s) => s.id === saleId);
   if (!sale) throw notFound('Sale not found.');
   if (sale.status === 'void') throw bad('That bill is already cancelled.');
@@ -232,6 +270,15 @@ function voidSale(db, saleId) {
   }
   sale.status = 'void';
   sale.voidedAt = new Date().toISOString();
+  sale.voidedBy = actor?.name ?? 'Unknown';
+  sale.voidedById = actor?.id ?? null;
+  sale.voidedAuthorisedBy = actor?.authorisedBy?.name ?? null;
+
+  audit(db, actor, 'sale.void', `Cancelled bill ${sale.invoiceNo} for ${asMoney(db, sale.total)}`, {
+    saleId: sale.id,
+    invoiceNo: sale.invoiceNo,
+    amount: sale.total,
+  });
   return sale;
 }
 
@@ -279,6 +326,17 @@ function reportSummary(db, from, to) {
     }
   }
 
+  // Who rang up what — the point of naming people in the first place.
+  const byUser = new Map();
+  for (const sale of sales) {
+    const who = sale.soldBy ?? 'Unknown';
+    const bucket = byUser.get(who) ?? { name: who, revenue: 0, bills: 0, items: 0 };
+    bucket.revenue = round2(bucket.revenue + sale.total);
+    bucket.bills += 1;
+    bucket.items += sale.items.reduce((n, i) => n + i.qty, 0);
+    byUser.set(who, bucket);
+  }
+
   const byPaymentMode = ['cash', 'card', 'digital', 'credit'].map((mode) => ({
     mode,
     amount: round2(sales.filter((s) => s.paymentMode === mode).reduce((sum, s) => sum + s.total, 0)),
@@ -306,6 +364,7 @@ function reportSummary(db, from, to) {
     byDay: [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day)),
     topProducts: [...byProduct.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 10),
     byPaymentMode,
+    byUser: [...byUser.values()].sort((a, b) => b.revenue - a.revenue),
     byHour: hours,
     stockValue: round2(db.batches.reduce((s, b) => s + b.quantity * b.costPrice, 0)),
     creditOutstanding: round2(db.customers.reduce((s, c) => s + (c.creditBalance ?? 0), 0)),
@@ -390,14 +449,20 @@ export const routes = [
       db.products.push(product);
       return product;
     }), 'admin'],
-  ['PUT', '/api/products/:id', (p, body) =>
+  ['PUT', '/api/products/:id', (p, body, _q, ctx) =>
     writeDb((db) => {
       const product = db.products.find((x) => x.id === p.id);
       if (!product) throw notFound('Product not found.');
+      const before = { taxRate: product.taxRate, name: product.name };
       Object.assign(product, productPayload({ ...product, ...body }, db.settings));
+      if (before.taxRate !== product.taxRate) {
+        audit(db, ctx?.actor, 'product.tax', `Changed tax on ${product.name} from ${before.taxRate}% to ${product.taxRate}%`);
+      } else {
+        audit(db, ctx?.actor, 'product.edit', `Edited ${product.name}`);
+      }
       return product;
     }), 'admin'],
-  ['DELETE', '/api/products/:id', (p) =>
+  ['DELETE', '/api/products/:id', (p, _b, _q, ctx) =>
     writeDb((db) => {
       const index = db.products.findIndex((x) => x.id === p.id);
       if (index === -1) throw notFound('Product not found.');
@@ -406,6 +471,7 @@ export const routes = [
       }
       db.batches = db.batches.filter((b) => b.productId !== p.id);
       const [removed] = db.products.splice(index, 1);
+      audit(db, ctx?.actor, 'product.delete', `Deleted ${removed.name} and its batches`);
       return removed;
     }), 'admin'],
 
@@ -416,14 +482,22 @@ export const routes = [
       db.batches.push(batch);
       return batch;
     }), 'admin'],
-  ['PUT', '/api/batches/:id', (p, body) =>
+  ['PUT', '/api/batches/:id', (p, body, _q, ctx) =>
     writeDb((db) => {
       const batch = db.batches.find((x) => x.id === p.id);
       if (!batch) throw notFound('Batch not found.');
+      const wasPrice = batch.salePrice;
+      const wasQty = batch.quantity;
       Object.assign(batch, batchPayload({ ...batch, ...body }, db));
+      const name = db.products.find((x) => x.id === batch.productId)?.name ?? 'a medicine';
+      if (wasPrice !== batch.salePrice) {
+        audit(db, ctx?.actor, 'batch.price', `Changed ${name} batch ${batch.batchNo} price from ${asMoney(db, wasPrice)} to ${asMoney(db, batch.salePrice)}`);
+      } else if (wasQty !== batch.quantity) {
+        audit(db, ctx?.actor, 'batch.quantity', `Adjusted ${name} batch ${batch.batchNo} stock from ${wasQty} to ${batch.quantity}`);
+      }
       return batch;
     }), 'admin'],
-  ['DELETE', '/api/batches/:id', (p) =>
+  ['DELETE', '/api/batches/:id', (p, _b, _q, ctx) =>
     writeDb((db) => {
       const index = db.batches.findIndex((x) => x.id === p.id);
       if (index === -1) throw notFound('Batch not found.');
@@ -431,6 +505,8 @@ export const routes = [
         throw bad('This batch appears on past bills, so it cannot be deleted. Set its quantity to zero instead.');
       }
       const [removed] = db.batches.splice(index, 1);
+      const name = db.products.find((x) => x.id === removed.productId)?.name ?? 'a medicine';
+      audit(db, ctx?.actor, 'batch.delete', `Deleted ${name} batch ${removed.batchNo}`);
       return removed;
     }), 'admin'],
 
@@ -452,7 +528,7 @@ export const routes = [
       Object.assign(customer, customerPayload({ ...customer, ...body }));
       return customer;
     })],
-  ['DELETE', '/api/customers/:id', (p) =>
+  ['DELETE', '/api/customers/:id', (p, _b, _q, ctx) =>
     writeDb((db) => {
       const index = db.customers.findIndex((x) => x.id === p.id);
       if (index === -1) throw notFound('Customer not found.');
@@ -460,6 +536,7 @@ export const routes = [
         throw bad('This customer still owes money. Settle the balance before removing them.');
       }
       const [removed] = db.customers.splice(index, 1);
+      audit(db, ctx?.actor, 'customer.delete', `Removed customer ${removed.name}`);
       return removed;
     }), 'admin'],
   ['GET', '/api/customers/:id/ledger', (p) => {
@@ -495,10 +572,10 @@ export const routes = [
     if (!sale) throw notFound('Sale not found.');
     return sale;
   }],
-  ['POST', '/api/sales', (_p, body) => writeDb((db) => createSale(db, body))],
-  ['POST', '/api/sales/:id/void', (p) => writeDb((db) => voidSale(db, p.id)), 'admin'],
+  ['POST', '/api/sales', (_p, body, _q, ctx) => writeDb((db) => createSale(db, body, ctx?.actor))],
+  ['POST', '/api/sales/:id/void', (p, _b, _q, ctx) => writeDb((db) => voidSale(db, p.id, ctx?.actor)), 'admin'],
 
-  ['POST', '/api/payments', (_p, body) =>
+  ['POST', '/api/payments', (_p, body, _q, ctx) =>
     writeDb((db) => {
       const customer = db.customers.find((c) => c.id === str(body.customerId));
       if (!customer) throw notFound('Customer not found.');
@@ -509,6 +586,7 @@ export const routes = [
         throw bad(`That is more than the ${db.settings.currencySymbol ?? 'Rs'} ${owed} outstanding.`);
       }
       customer.creditBalance = round2(owed - amount);
+      audit(db, ctx?.actor, 'payment', `Took ${asMoney(db, amount)} from ${customer.name} against udhaar`);
       const payment = {
         id: id('pay'),
         customerId: customer.id,
@@ -523,8 +601,57 @@ export const routes = [
 
   ['GET', '/api/reports/summary', (_p, _b, query) => reportSummary(readDb(), query.from, query.to), 'admin'],
 
+  ['GET', '/api/users', () => listUsers(), 'admin'],
+  ['POST', '/api/users', async (_p, body, _q, ctx) => {
+    let user;
+    try {
+      user = await createUser(body);
+    } catch (err) {
+      throw new HttpError(400, err.message);
+    }
+    await writeDb((db) => audit(db, ctx?.actor, 'user.add', `Added ${user.name} as ${user.role === 'admin' ? 'owner' : 'counter'}`));
+    return user;
+  }, 'admin'],
+  ['PUT', '/api/users/:id', async (p, body, _q, ctx) => {
+    let user;
+    try {
+      user = await updateUser(p.id, body);
+    } catch (err) {
+      throw new HttpError(400, err.message);
+    }
+    // A changed passcode or a deactivated person must not keep an open session.
+    if (body.passcode || body.active === false) destroySessionsFor(p.id);
+    const what = body.passcode ? 'passcode' : body.active === false ? 'access' : 'details';
+    await writeDb((db) => audit(db, ctx?.actor, 'user.edit', `Changed ${user.name}'s ${what}`));
+    return user;
+  }, 'admin'],
+  ['DELETE', '/api/users/:id', async (p, _b, _q, ctx) => {
+    const name = listUsers().find((u) => u.id === p.id)?.name ?? 'someone';
+    try {
+      await deleteUser(p.id);
+    } catch (err) {
+      throw new HttpError(400, err.message);
+    }
+    destroySessionsFor(p.id);
+    await writeDb((db) => audit(db, ctx?.actor, 'user.remove', `Removed ${name} from the till`));
+    return { id: p.id };
+  }, 'admin'],
+
+  ['GET', '/api/audit', (_p, _b, query) => {
+    const db = readDb();
+    const limit = Math.min(Math.max(Number(query.limit) || 200, 1), 1000);
+    let entries = Array.isArray(db.audit) ? db.audit : [];
+    if (query.q) {
+      const needle = String(query.q).toLowerCase();
+      entries = entries.filter(
+        (e) => e.summary.toLowerCase().includes(needle) || e.by.toLowerCase().includes(needle),
+      );
+    }
+    return entries.slice(0, limit);
+  }, 'admin'],
+
   ['GET', '/api/settings', () => readDb().settings],
-  ['PUT', '/api/settings', (_p, body) =>
+  ['PUT', '/api/settings', (_p, body, _q, ctx) =>
     writeDb((db) => {
       const next = { ...db.settings, ...body };
       next.lowStockThreshold = Math.max(0, Math.round(num(next.lowStockThreshold, 20)));
@@ -537,6 +664,7 @@ export const routes = [
       next.backupKeep = Math.min(Math.max(Math.round(num(next.backupKeep, 14)), 1), 365);
       next.backupFolder = str(next.backupFolder);
       db.settings = next;
+      audit(db, ctx?.actor, 'settings', 'Changed shop settings');
       return db.settings;
     }), 'admin'],
 

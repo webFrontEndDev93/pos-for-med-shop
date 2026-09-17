@@ -243,6 +243,10 @@ export function buildSeed() {
         prescriptionRef: rxRequired ? `RX-${between(10000, 99999)}` : '',
         note: '',
         status: 'completed',
+        // The demo history is split between the two people a fresh install
+        // creates, so the attribution columns have something to show.
+        soldBy: rand() < 0.65 ? 'Counter' : 'Owner',
+        soldById: null,
       });
       db.settings.nextInvoiceSeq += 1;
     }

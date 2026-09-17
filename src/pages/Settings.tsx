@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type BackupListing } from '../lib/api';
 import { useStore } from '../lib/store';
-import { moneyShort } from '../lib/format';
-import type { Settings } from '../lib/types';
+import { formatDateTime, moneyShort, relativeTime } from '../lib/format';
+import type { AuditEntry, Settings, User } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, Field, Modal, Stat, Switch } from '../components/ui';
 import '../styles/pages.css';
@@ -10,7 +10,7 @@ import '../styles/pages.css';
 export function SettingsPage() {
   const {
     settings, products, batches, customers, recentSales,
-    setSettings, notify, reportError, reload, theme, toggleTheme, signOut, hasStaffPasscode,
+    setSettings, notify, reportError, reload, theme, toggleTheme, signOut, user,
   } = useStore();
 
   const [draft, setDraft] = useState<Settings>(settings);
@@ -20,7 +20,41 @@ export function SettingsPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [backups, setBackups] = useState<BackupListing | null>(null);
   const [backingUp, setBackingUp] = useState(false);
-  const [changingPasscode, setChangingPasscode] = useState(false);
+  const [users, setUsers] = useState<User[] | null>(null);
+  const [editingUser, setEditingUser] = useState<Partial<User> | null>(null);
+  const [removingUser, setRemovingUser] = useState<User | null>(null);
+  const [audit, setAudit] = useState<AuditEntry[] | null>(null);
+  const [auditQuery, setAuditQuery] = useState('');
+
+  const loadUsers = useCallback(() => {
+    api.users().then(setUsers).catch(() => setUsers([]));
+  }, []);
+  useEffect(loadUsers, [loadUsers]);
+
+  // Debounced so typing in the filter does not hammer the server.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      api.audit(auditQuery ? { q: auditQuery, limit: '200' } : { limit: '200' })
+        .then(setAudit)
+        .catch(() => setAudit([]));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [auditQuery]);
+
+  const removeUser = async () => {
+    if (!removingUser) return;
+    setBusy(true);
+    try {
+      await api.deleteUser(removingUser.id);
+      notify('success', 'Removed', `${removingUser.name} can no longer sign in.`);
+      setRemovingUser(null);
+      loadUsers();
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const loadBackups = useCallback(() => {
     api.backups().then(setBackups).catch(() => setBackups(null));
@@ -454,25 +488,138 @@ export function SettingsPage() {
             </div>
           </div>
           <div className="card-body">
-            <div className="setting-row" style={{ paddingTop: 0 }}>
+            <div className="row-between" style={{ paddingBottom: 'var(--space-3)' }}>
               <div>
-                <div className="setting-name">Passcodes</div>
+                <div className="setting-name">People on the till</div>
                 <div className="setting-desc">
-                  The owner passcode unlocks everything. The counter passcode
-                  {hasStaffPasscode ? ' is set and ' : ' is not set yet — it would '}
-                  let staff bill and look up stock without reaching cancellations, takings,
-                  prices or Settings.
+                  Everyone has their own passcode — that is how a bill knows who rang it up.
+                  Owners can do everything; counter staff bill and look up stock but cannot
+                  cancel bills, see takings, change prices or open Settings.
                 </div>
               </div>
-              <Button icon="shield" onClick={() => setChangingPasscode(true)}>Manage passcodes</Button>
+              <Button icon="plus" onClick={() => setEditingUser({})}>Add person</Button>
             </div>
+
+            {users === null ? (
+              <div className="skeleton" style={{ height: '4rem' }} />
+            ) : (
+              <div className="table-wrap" style={{ border: '1px solid var(--border)' }}>
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Last signed in</th>
+                      <th style={{ width: '9rem' }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((person) => (
+                      <tr key={person.id} style={{ opacity: person.active ? 1 : 0.55 }}>
+                        <td>
+                          <div className="row" style={{ gap: 'var(--space-2)' }}>
+                            <span className="customer-avatar" style={{ width: '1.75rem', height: '1.75rem' }}>
+                              {person.name.slice(0, 1).toUpperCase()}
+                            </span>
+                            <span className="cell-title">{person.name}</span>
+                            {person.id === user?.id && <Badge tone="brand">you</Badge>}
+                            {!person.active && <Badge tone="neutral">signed off</Badge>}
+                          </div>
+                        </td>
+                        <td>
+                          <Badge tone={person.role === 'admin' ? 'warning' : 'neutral'}>
+                            {person.role === 'admin' ? 'Owner' : 'Counter'}
+                          </Badge>
+                        </td>
+                        <td className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                          {person.lastSignInAt ? relativeTime(person.lastSignInAt) : 'never'}
+                        </td>
+                        <td className="right">
+                          <div className="row" style={{ justifyContent: 'flex-end', gap: 2 }}>
+                            <Button
+                              variant="ghost" size="sm" iconOnly icon="edit"
+                              onClick={() => setEditingUser(person)}
+                              aria-label={`Edit ${person.name}`}
+                            />
+                            <Button
+                              variant="ghost" size="sm" iconOnly icon="trash"
+                              onClick={() => setRemovingUser(person)}
+                              aria-label={`Remove ${person.name}`}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="setting-row">
               <div>
                 <div className="setting-name">Sign out</div>
-                <div className="setting-desc">Locks the counter without stopping MediPOS.</div>
+                <div className="setting-desc">
+                  Locks the counter without stopping MediPOS. You are signed in as{' '}
+                  <strong>{user?.name ?? 'unknown'}</strong>.
+                </div>
               </div>
               <Button icon="close" onClick={() => void signOut()}>Sign out</Button>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Activity</div>
+              <div className="cell-sub">
+                Cancelled bills, price and stock changes, settings and people. Travels with
+                your backups.
+              </div>
+            </div>
+            <div className="search-slim" style={{ position: 'relative' }}>
+              <Icon
+                name="search" size={15}
+                style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+              />
+              <input
+                className="input"
+                style={{ paddingLeft: '2.4rem', width: '14rem' }}
+                placeholder="Name or what happened…"
+                value={auditQuery}
+                onChange={(e) => setAuditQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="card-body card-body--tight">
+            {audit === null ? (
+              <div className="skeleton" style={{ height: '4rem' }} />
+            ) : audit.length === 0 ? (
+              <p className="muted" style={{ fontSize: 'var(--text-sm)', padding: 'var(--space-3)' }}>
+                {auditQuery ? 'Nothing matches that.' : 'Nothing recorded yet.'}
+              </p>
+            ) : (
+              <div style={{ maxHeight: '22rem', overflowY: 'auto' }}>
+                {audit.map((entry) => (
+                  <div className="ledger-row" key={entry.id} style={{ padding: 'var(--space-2) var(--space-2)' }}>
+                    <span
+                      className="customer-avatar"
+                      style={{ width: '1.6rem', height: '1.6rem', fontSize: '10px' }}
+                      title={entry.by}
+                    >
+                      {entry.by.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 'var(--text-sm)' }}>{entry.summary}</span>
+                      <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                        {entry.by}
+                        {entry.authorisedBy && ` · authorised by ${entry.authorisedBy}`}
+                        {' · '}{formatDateTime(entry.at)}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -503,7 +650,29 @@ export function SettingsPage() {
         </p>
       </div>
 
-      {changingPasscode && <PasscodeDialog onClose={() => setChangingPasscode(false)} />}
+      {editingUser && (
+        <UserDialog
+          person={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => { setEditingUser(null); loadUsers(); }}
+        />
+      )}
+
+      {removingUser && (
+        <ConfirmDialog
+          title={`Remove ${removingUser.name}?`}
+          message={
+            <>
+              <strong>{removingUser.name}</strong> will no longer be able to sign in. Bills they
+              already rang up keep their name — the record does not change.
+            </>
+          }
+          confirmLabel="Remove"
+          onConfirm={removeUser}
+          onCancel={() => setRemovingUser(null)}
+          busy={busy}
+        />
+      )}
 
       {restoring !== null && (
         <ConfirmDialog
@@ -520,37 +689,42 @@ export function SettingsPage() {
 }
 
 
-/* ------------------------------------------------------------ passcode */
+/* -------------------------------------------------------------- people */
 
-function PasscodeDialog({ onClose }: { onClose: () => void }) {
-  const { notify, hasStaffPasscode, refreshRole } = useStore();
-  const [role, setRole] = useState<'admin' | 'staff'>('admin');
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
+function UserDialog({
+  person, onClose, onSaved,
+}: {
+  person: Partial<User>;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { notify } = useStore();
+  const existing = Boolean(person.id);
+  const [name, setName] = useState(person.name ?? '');
+  const [role, setRole] = useState<'admin' | 'staff'>(person.role ?? 'staff');
+  const [passcode, setPasscode] = useState('');
+  const [active, setActive] = useState(person.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const mismatch = confirm.length > 0 && next !== confirm;
-  const removingStaff = role === 'staff' && next === '' && confirm === '';
-  const invalid = removingStaff
-    ? !current
-    : next.length < 4 || next !== confirm || !current;
+  // An existing person keeps their passcode unless a new one is typed.
+  const invalid = !name.trim() || (!existing && passcode.length < 4) ||
+    (passcode.length > 0 && passcode.length < 4);
 
   const submit = async () => {
     setSaving(true);
     setError(null);
     try {
-      await api.authChange(current, next, role);
-      await refreshRole();
-      notify(
-        'success',
-        removingStaff ? 'Counter passcode removed' : 'Passcode changed',
-        'Every device has been signed out.',
-      );
-      onClose();
+      if (existing) {
+        await api.updateUser(person.id!, { name, role, active, ...(passcode ? { passcode } : {}) });
+        notify('success', 'Saved', `${name}'s details are up to date.`);
+      } else {
+        await api.createUser({ name, role, passcode });
+        notify('success', 'Added', `${name} can now sign in.`);
+      }
+      onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not change the passcode.');
+      setError(err instanceof ApiError ? err.message : 'Could not save.');
     } finally {
       setSaving(false);
     }
@@ -558,46 +732,44 @@ function PasscodeDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title="Passcodes"
-      subtitle="Only the owner can change these."
+      title={existing ? `Edit ${person.name}` : 'Add a person'}
+      subtitle="Their passcode is how the till knows who rang up a bill."
       width="28rem"
       onClose={onClose}
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={submit} disabled={invalid || saving}>
-            {saving ? 'Saving…' : removingStaff ? 'Remove counter passcode' : 'Change passcode'}
+            {saving ? 'Saving…' : existing ? 'Save' : 'Add person'}
           </Button>
         </>
       }
     >
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-        <Field label="Which passcode">
-          <select
-            className="select"
-            value={role}
-            onChange={(e) => { setRole(e.target.value as 'admin' | 'staff'); setError(null); }}
-          >
-            <option value="admin">Owner — full access</option>
-            <option value="staff">
-              Counter — billing only {hasStaffPasscode ? '(set)' : '(not set yet)'}
-            </option>
+        <Field label="Name" hint="Shown on every bill they ring up.">
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ayesha" />
+        </Field>
+        <Field label="Role">
+          <select className="select" value={role} onChange={(e) => setRole(e.target.value as 'admin' | 'staff')}>
+            <option value="staff">Counter — billing and stock lookup</option>
+            <option value="admin">Owner — everything</option>
           </select>
         </Field>
-        <Field label="Owner passcode" hint="Confirms it is you, whichever one you are changing.">
-          <input className="input" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-        </Field>
         <Field
-          label={role === 'staff' ? 'New counter passcode' : 'New owner passcode'}
-          hint={role === 'staff'
-            ? 'At least 4 characters. Leave both boxes blank to remove the counter passcode.'
-            : 'At least 4 characters.'}
+          label={existing ? 'New passcode' : 'Passcode'}
+          hint={existing
+            ? 'Leave blank to keep their current one. Changing it signs them out.'
+            : 'At least 4 characters, and different from everyone else\u2019s.'}
         >
-          <input className="input" type="password" value={next} onChange={(e) => setNext(e.target.value)} />
+          <input className="input" type="password" value={passcode} onChange={(e) => setPasscode(e.target.value)} />
         </Field>
-        <Field label="Confirm new passcode" error={mismatch ? 'Those two do not match.' : undefined}>
-          <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        </Field>
+        {existing && (
+          <Switch
+            checked={active}
+            onChange={setActive}
+            label="Can sign in"
+          />
+        )}
         {error && <p className="error-text">{error}</p>}
       </div>
     </Modal>

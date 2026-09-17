@@ -163,10 +163,11 @@ production bundle is about 98 kB gzipped.
 validated for CVD separation against both the light and dark surfaces, and series are
 distinguished by line style and written labels as well as hue.
 
-## Two passcodes: owner and counter
+## Who is on the till
 
-MediPOS asks for a passcode the first time it starts, and on every start after that.
-You set **two**:
+Everyone gets their **own passcode**, and that passcode is how MediPOS knows who they
+are — so every bill records who rang it up. Each person is an **owner** or on the
+**counter**:
 
 | | Owner | Counter |
 | --- | --- | --- |
@@ -176,24 +177,42 @@ You set **two**:
 | See takings, profit and best-sellers | yes | no |
 | Add stock, change a price or a tax rate | yes | no |
 | Delete a medicine, batch or customer | yes | no |
-| Open Settings, backups, change passcodes | yes | no |
+| Open Settings, backups, manage people | yes | no |
 
-![Setting both passcodes on first run](docs/screens/passcode.png)
+![Setting up the till](docs/screens/passcode.png)
 
-The counter passcode is optional — leave it blank to run the shop on one code, and add
-it later in Settings.
+Add and remove people in **Settings → People on the till**. Two people can never share
+a passcode — the till would not be able to tell them apart, so it refuses. The shop
+always keeps at least one owner who can sign in.
+
+Removing someone stops them signing in; it does **not** rewrite history. Bills they
+rang up keep their name, because an audit trail that changes retroactively is not one.
+
+### The audit trail
+
+- Every bill records **who rang it up**, shown on the receipt ("Served by: Ayesha"),
+  in the bill register, in the CSV export, and summarised per person in Reports.
+- Cancelling a bill records **who cancelled it** and, if it went through a manager
+  override, **who authorised it**.
+- **Settings → Activity** lists the things worth questioning later: cancelled bills,
+  price and tax changes, stock adjustments, deletions, settings changes, udhaar
+  payments taken, and people added or removed. It is searchable and travels with your
+  backups.
+
+![The activity log](docs/screens/activity.png)
 
 ### Manager override
 
 Staff are not left at a dead end. When the counter hits something owner-only, MediPOS
-asks for the **owner passcode** right there; the owner walks over, types it, and the
+asks for an **owner passcode** right there; the owner walks over, types it, and the
 action goes through. Nobody signs out mid-queue.
 
 ![Asking for the owner passcode](docs/screens/override.png)
 
-The override lasts five minutes and is visible in the sidebar with a countdown, which
-doubles as a button to end it early. It lifts *that session* temporarily — it does not
-change who is signed in.
+The override lasts five minutes and shows in the sidebar — naming the owner who
+approved it, with a countdown that doubles as a button to end it early. It lifts *that
+session* temporarily; it does not change who is signed in, which is why the log can say
+"Ayesha cancelled it, authorised by Bilal".
 
 ### How it is enforced
 
@@ -205,14 +224,14 @@ that is only a courtesy: a staff session that replays a request or types a URL g
   `db.json`, so a backup you email yourself never carries them.
 - Five wrong tries triggers a lockout that doubles each time. A correct passcode is
   refused while locked out, so the lockout cannot be walked around.
-- The two passcodes must differ, or the roles would silently collapse into one.
-- Only the owner can change either passcode — otherwise staff could promote themselves.
+- Only owners can manage people — otherwise staff could promote themselves.
+- Changing someone's passcode, or switching them off, signs them out immediately.
 - Sessions live in memory and last a shift. Restarting MediPOS signs the counter out.
-- Forgot the owner passcode? Delete `server/data/auth.json` and restart to set new ones.
+- Forgot the owner passcode? Delete `server/data/auth.json` and restart to start again.
 - `POS_AUTH=off` disables the gate entirely, for development or a one-person shop.
 
-A till set up before roles existed keeps working: its single passcode becomes the owner
-one, and the counter carries on until you add a staff code.
+A till set up before this keeps working: an older single or shared passcode becomes a
+person called *Owner* (and *Counter*), ready to be renamed in Settings.
 
 The server listens on the whole network, so a phone on the shop Wi-Fi can reach it —
 the passcodes are the only thing in the way. Use `HOST=127.0.0.1` to bind to the
@@ -237,8 +256,8 @@ previous state first.
 
 ## Limits worth knowing
 
-- Two roles, not individual staff accounts: bills do not record *which* person rang
-  them up, so there is no per-person audit trail.
+- Two roles only — owner or counter. There is no finer-grained permission model, and
+  no approval workflow beyond the manager override.
 - Several browsers can point at one server on the LAN, but there is no locking between
   tills — two people billing the same last packet at the same moment is not handled.
 - No purchase orders, supplier ledger, or sales-tax return filing.

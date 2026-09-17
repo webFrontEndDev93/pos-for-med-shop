@@ -22,13 +22,15 @@ interface Store {
   loadError: string | null;
   lock: LockState;
   minPasscodeLength: number;
-  /** Who is signed in. Null before the first check. */
+  /** Who is signed in, by name. Null before the first check. */
+  user: { id: string; name: string; role: Role } | null;
   role: Role | null;
   /** True for an owner session, or a counter session under manager override. */
   isAdmin: boolean;
   /** Seconds left on a manager override, 0 when not elevated. */
   elevatedFor: number;
-  hasStaffPasscode: boolean;
+  /** The owner who approved the current manager override. */
+  elevatedBy: string | null;
   refreshRole: () => Promise<void>;
   dropElevation: () => Promise<void>;
   unlock: () => void;
@@ -66,10 +68,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [lock, setLock] = useState<LockState>('checking');
   const [minPasscodeLength, setMinPasscodeLength] = useState(4);
+  const [user, setUser] = useState<{ id: string; name: string; role: Role } | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [elevatedFor, setElevatedFor] = useState(0);
-  const [hasStaffPasscode, setHasStaffPasscode] = useState(false);
+  const [elevatedBy, setElevatedBy] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>({} as Settings);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -141,10 +144,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const status = await api.authStatus();
       setMinPasscodeLength(status.minLength);
+      setUser(status.user);
       setRole(status.role);
       setIsAdmin(status.isAdmin);
       setElevatedFor(status.elevatedForSeconds);
-      setHasStaffPasscode(status.hasStaffPasscode);
+      setElevatedBy(status.elevatedBy);
       if (!status.required || status.authenticated) {
         setLock('open');
         await loadShop();
@@ -170,10 +174,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshRole = useCallback(async () => {
     try {
       const status = await api.authStatus();
+      setUser(status.user);
       setRole(status.role);
       setIsAdmin(status.isAdmin);
       setElevatedFor(status.elevatedForSeconds);
-      setHasStaffPasscode(status.hasStaffPasscode);
+      setElevatedBy(status.elevatedBy);
     } catch {
       /* the next gated call will surface it */
     }
@@ -191,6 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setElevatedFor((seconds) => {
         if (seconds <= 1) {
           setIsAdmin(role === 'admin');
+          setElevatedBy(null);
           return 0;
         }
         return seconds - 1;
@@ -207,9 +213,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await api.authLogout().catch(() => undefined);
+    setUser(null);
     setRole(null);
     setIsAdmin(false);
     setElevatedFor(0);
+    setElevatedBy(null);
     setLock('login');
   }, []);
 
@@ -243,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => ({
     ready, loadError, lock, minPasscodeLength, unlock, signOut,
-    role, isAdmin, elevatedFor, hasStaffPasscode, refreshRole, dropElevation,
+    user, role, isAdmin, elevatedFor, elevatedBy, refreshRole, dropElevation,
     settings, products, batches, customers, recentSales, alerts,
     theme,
     toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
@@ -251,7 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reload, setProducts, setBatches, setCustomers, setSettings, registerSale,
   }), [
     ready, loadError, lock, minPasscodeLength, unlock, signOut,
-    role, isAdmin, elevatedFor, hasStaffPasscode, refreshRole, dropElevation,
+    user, role, isAdmin, elevatedFor, elevatedBy, refreshRole, dropElevation,
     settings, products, batches, customers, recentSales, alerts,
     theme, toasts, notify, dismissToast, reportError, reload, registerSale,
   ]);

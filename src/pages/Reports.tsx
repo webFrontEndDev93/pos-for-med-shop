@@ -79,7 +79,10 @@ export function Reports() {
     const needle = query.trim().toLowerCase();
     if (!needle) return sales;
     return sales.filter(
-      (s) => s.invoiceNo.toLowerCase().includes(needle) || s.customerName.toLowerCase().includes(needle),
+      (s) =>
+        s.invoiceNo.toLowerCase().includes(needle) ||
+        s.customerName.toLowerCase().includes(needle) ||
+        (s.soldBy ?? '').toLowerCase().includes(needle),
     );
   }, [sales, query]);
 
@@ -117,6 +120,7 @@ export function Reports() {
       s.due,
       s.paymentMode,
       s.status,
+      s.voidedBy ?? '',
     ]);
     const csv = [header, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -253,6 +257,35 @@ export function Reports() {
                   <div className="card-body"><PaymentMix data={summary.byPaymentMode} /></div>
                 </div>
 
+                {summary.byUser.length > 0 && (
+                  <div className="card">
+                    <div className="card-head">
+                      <div>
+                        <div className="card-title">Who rang it up</div>
+                        <div className="cell-sub">Bills taken in this period</div>
+                      </div>
+                    </div>
+                    <div className="card-body">
+                      <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+                        {summary.byUser.map((person) => (
+                          <div className="row-between" key={person.name} style={{ fontSize: 'var(--text-sm)' }}>
+                            <span className="row" style={{ gap: 'var(--space-2)' }}>
+                              <span className="customer-avatar" style={{ width: '1.6rem', height: '1.6rem', fontSize: '10px' }}>
+                                {person.name.slice(0, 1).toUpperCase()}
+                              </span>
+                              <span>{person.name}</span>
+                              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                                {person.bills} bill{person.bills === 1 ? '' : 's'}
+                              </span>
+                            </span>
+                            <span className="num" style={{ fontWeight: 620 }}>{money(person.revenue)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="card">
                   <div className="card-head">
                     <div>
@@ -310,7 +343,7 @@ export function Reports() {
                   <input
                     className="input"
                     style={{ paddingLeft: '2.4rem', width: '16rem' }}
-                    placeholder="Invoice or customer…"
+                    placeholder="Invoice, customer or person…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -329,6 +362,7 @@ export function Reports() {
                       <th>Invoice</th>
                       <th>When</th>
                       <th>Customer</th>
+                      <th>Billed by</th>
                       <th className="right">Items</th>
                       <th className="right">Total</th>
                       <th>Paid by</th>
@@ -346,6 +380,15 @@ export function Reports() {
                         <td>
                           {sale.customerName}
                           {sale.prescriptionRef && <div className="cell-sub">Rx {sale.prescriptionRef}</div>}
+                        </td>
+                        <td>
+                          {sale.soldBy ?? <span className="muted">—</span>}
+                          {sale.status === 'void' && sale.voidedBy && (
+                            <div className="cell-sub">
+                              cancelled by {sale.voidedBy}
+                              {sale.voidedAuthorisedBy && ` (${sale.voidedAuthorisedBy})`}
+                            </div>
+                          )}
                         </td>
                         <td className="right num">{sale.items.length}</td>
                         <td className="right num" style={{ fontWeight: 620 }}>

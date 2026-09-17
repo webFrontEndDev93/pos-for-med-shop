@@ -8,9 +8,9 @@ import { DB_FILE } from './db.mjs';
 import { ensureSeed } from './seed.mjs';
 import { startBackupSchedule, stopBackupSchedule } from './backup.mjs';
 import {
-  authEnabled, isConfigured, hasStaffPasscode, setPasscode, roleFor, verifyAdmin,
-  createSession, getSession, validateSession, destroySession, destroyAllSessions,
-  isAdmin, elevate, dropElevation, elevationSecondsLeft,
+  authEnabled, isConfigured, createUser, userFor, adminFor, noteSignIn, listUsers,
+  createSession, getSession, destroySession,
+  isAdmin, elevate, dropElevation, elevationSecondsLeft, actorFor,
   lockedFor, recordFailure, clearFailures,
   readCookie, sessionCookie, clearCookie, COOKIE, MIN_PASSCODE_LENGTH, ELEVATION_SECONDS,
 } from './auth.mjs';
@@ -132,13 +132,15 @@ async function handleAuth(req, res, pathname) {
     send(res, 200, {
       required: authEnabled(),
       configured: isConfigured(),
-      hasStaffPasscode: hasStaffPasscode(),
       authenticated: !authEnabled() || Boolean(session),
-      // With the gate off everyone is effectively the owner.
+      // With the gate off there is nobody to name, so the till runs as an owner.
+      user: session ? { id: session.userId, name: session.name, role: session.role } : null,
       role: !authEnabled() ? 'admin' : session?.role ?? null,
       isAdmin: !authEnabled() || isAdmin(session),
       elevatedForSeconds: elevationSecondsLeft(session),
+      elevatedBy: session?.elevatedBy?.name ?? null,
       elevationSeconds: ELEVATION_SECONDS,
+      userCount: listUsers().length,
       minLength: MIN_PASSCODE_LENGTH,
       lockedForSeconds: Math.ceil(locked / 1000),
     });
@@ -166,15 +168,27 @@ async function handleAuth(req, res, pathname) {
       send(res, 409, { error: 'A passcode is already set. Change it from Settings instead.' });
       return;
     }
+    let owner;
     try {
-      await setPasscode(body.passcode, 'admin');
-      // The counter passcode is optional; a one-person shop skips it.
-      if (String(body.staffPasscode ?? '') !== '') await setPasscode(body.staffPasscode, 'staff');
+      owner = await createUser({
+        name: String(body.name ?? '').trim() || 'Owner',
+        role: 'admin',
+        passcode: body.passcode,
+      });
+      // A counter person is optional; a one-person shop skips it.
+      if (String(body.staffPasscode ?? '') !== '') {
+        await createUser({
+          name: String(body.staffName ?? '').trim() || 'Counter',
+          role: 'staff',
+          passcode: body.staffPasscode,
+        });
+      }
     } catch (err) {
       send(res, 400, { error: err.message });
       return;
     }
-    send(res, 200, { ok: true, role: 'admin' }, { 'set-cookie': sessionCookie(createSession('admin')) });
+    await noteSignIn(owner.id);
+    send(res, 200, { ok: true, user: owner }, { 'set-cookie': sessionCookie(createSession(owner)) });
     return;
   }
 
@@ -191,8 +205,8 @@ async function handleAuth(req, res, pathname) {
       send(res, 409, { error: 'No passcode is set yet.', code: 'setup_required' });
       return;
     }
-    const role = roleFor(body.passcode);
-    if (!role) {
+    const user = userFor(body.passcode);
+    if (!user) {
       const record = recordFailure(key);
       const left = Math.max(0, 5 - record.fails);
       send(res, 401, {
@@ -203,7 +217,8 @@ async function handleAuth(req, res, pathname) {
       return;
     }
     clearFailures(key);
-    send(res, 200, { ok: true, role }, { 'set-cookie': sessionCookie(createSession(role)) });
+    await noteSignIn(user.id);
+    send(res, 200, { ok: true, user }, { 'set-cookie': sessionCookie(createSession(user)) });
     return;
   }
 
@@ -220,14 +235,15 @@ async function handleAuth(req, res, pathname) {
       send(res, 401, { error: 'Please sign in again.' });
       return;
     }
-    if (!verifyAdmin(body.passcode)) {
+    const approver = adminFor(body.passcode);
+    if (!approver) {
       recordFailure(key);
-      send(res, 401, { error: 'That is not the owner passcode.' });
+      send(res, 401, { error: 'That is not an owner passcode.' });
       return;
     }
     clearFailures(key);
-    elevate(token);
-    send(res, 200, { ok: true, elevatedForSeconds: ELEVATION_SECONDS });
+    elevate(token, approver);
+    send(res, 200, { ok: true, elevatedForSeconds: ELEVATION_SECONDS, approvedBy: approver.name });
     return;
   }
 
@@ -240,37 +256,6 @@ async function handleAuth(req, res, pathname) {
   if (action === 'logout') {
     destroySession(readCookie(req.headers.cookie, COOKIE));
     send(res, 200, { ok: true }, { 'set-cookie': clearCookie() });
-    return;
-  }
-
-  if (action === 'change') {
-    const token = readCookie(req.headers.cookie, COOKIE);
-    const session = getSession(token);
-    if (authEnabled() && !session) {
-      send(res, 401, { error: 'Please sign in again.' });
-      return;
-    }
-    // Only the owner changes passcodes — otherwise staff could promote themselves.
-    if (authEnabled() && !isAdmin(session)) {
-      send(res, 403, { error: 'That needs the owner passcode.', code: 'admin_required' });
-      return;
-    }
-    if (isConfigured() && !verifyAdmin(body.current)) {
-      recordFailure(key);
-      send(res, 401, { error: 'The owner passcode is not right.' });
-      return;
-    }
-    const role = body.role === 'staff' ? 'staff' : 'admin';
-    try {
-      await setPasscode(body.next, role);
-    } catch (err) {
-      send(res, 400, { error: err.message });
-      return;
-    }
-    // Changing a passcode signs every device out, including this one if the
-    // owner code changed.
-    destroyAllSessions();
-    send(res, 200, { ok: true, role }, { 'set-cookie': sessionCookie(createSession('admin')) });
     return;
   }
 
@@ -336,7 +321,11 @@ const server = http.createServer(async (req, res) => {
   try {
     const body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await readBody(req) : {};
     const query = Object.fromEntries(url.searchParams);
-    const result = await route.handler(route.params, body, query);
+    // Handlers that write anything need to know who is doing it.
+    const result = await route.handler(route.params, body, query, {
+      actor: actorFor(session),
+      token: readCookie(req.headers.cookie, COOKIE),
+    });
     const download = pathname === '/api/backup' && req.method === 'GET';
     send(res, 200, result, download
       ? { 'content-disposition': `attachment; filename="medipos-backup-${new Date().toISOString().slice(0, 10)}.json"` }

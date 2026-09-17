@@ -27,15 +27,16 @@ Download the LTS installer from <https://nodejs.org> and run it. One time only.
 | Windows | Double-click `start.bat` |
 | macOS / Linux | `./start.sh` |
 
-Then open <http://localhost:4173>. The first screen asks you to set **two passcodes**:
+Then open <http://localhost:4173>. The first screen sets up the people on the till:
 
-- an **owner** passcode, which unlocks everything;
-- a **counter** passcode for staff, which bills and looks up stock but cannot cancel
+- **you**, the owner — your name and your own passcode, which unlocks everything;
+- optionally a **counter** person, who bills and looks up stock but cannot cancel
   bills, see takings, change prices or open Settings.
 
-The counter one is optional — leave it blank to run on a single code and add it later
-in Settings. When staff need something owner-only, MediPOS asks for the owner passcode
-on the spot, so you approve it without anyone signing out.
+Everyone gets their own passcode, because that is how a bill records who rang it up.
+Add the rest of your staff in Settings → People on the till. When someone on the
+counter needs something owner-only, MediPOS asks for an owner passcode on the spot, so
+you approve it without anyone signing out.
 
 ## 4. Make it start by itself
 
@@ -99,9 +100,9 @@ protecting it, so:
 - Use a passcode you would be happy defending, not `1234`.
 - On an untrusted network, bind it to the machine only: `HOST=127.0.0.1`.
 
-Give staff the **counter** passcode, never the owner one. Bills do not record which
-person rang them up, so there is no per-person audit trail — the roles limit what can
-be done, not who did it.
+Give each person their own passcode and never share one: bills record who rang them
+up, and two people on one code would make that meaningless. Settings → Activity shows
+cancelled bills, price changes and the rest, with the name against each.
 
 ## Updating
 

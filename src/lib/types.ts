@@ -4,7 +4,8 @@ export interface Settings {
   addressLine2: string;
   phone: string;
   email: string;
-  gstin: string;
+  ntn: string;
+  strn: string;
   drugLicense: string;
   pharmacist: string;
   currency: string;
@@ -13,6 +14,7 @@ export interface Settings {
   nextInvoiceSeq: number;
   lowStockThreshold: number;
   expiryAlertDays: number;
+  defaultTaxRate: number;
   roundOffTotals: boolean;
   footerNote: string;
 }
@@ -26,8 +28,8 @@ export interface Product {
   form: string;
   strength: string;
   packSize: string;
-  hsn: string;
-  gstRate: number;
+  hsCode: string;
+  taxRate: number;
   unit: string;
   rack: string;
   reorderLevel: number;
@@ -71,13 +73,13 @@ export interface SaleItem {
   form: string;
   batchNo: string;
   expiry: string;
-  hsn: string;
+  hsCode: string;
   unit: string;
   qty: number;
   mrp: number;
   salePrice: number;
   costPrice: number;
-  gstRate: number;
+  taxRate: number;
   discountPct: number;
 }
 
@@ -95,8 +97,6 @@ export interface Sale {
   extraDiscount: number;
   taxableValue: number;
   tax: number;
-  cgst: number;
-  sgst: number;
   subtotal: number;
   roundOff: number;
   total: number;

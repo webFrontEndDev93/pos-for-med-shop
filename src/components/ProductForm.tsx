@@ -6,17 +6,33 @@ import { Button, Field, Modal, Switch } from './ui';
 
 const FORMS = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Cream', 'Gel', 'Drops', 'Inhaler', 'Spray', 'Powder', 'Lozenge', 'Device', 'Other'];
 const CATEGORIES = ['Analgesic', 'Antibiotic', 'Gastro', 'Cardiac', 'Diabetes', 'Respiratory', 'Antihistamine', 'Hormone', 'Supplement', 'Topical', 'Antiseptic', 'Cold & Flu', 'Electrolyte', 'Device', 'Consumable', 'General'];
-const GST_RATES = [0, 5, 12, 18, 28];
+/**
+ * Pakistani sales-tax rates a pharmacy actually uses.
+ *
+ * 1% is the concessional rate for drugs registered under the Drugs Act 1976
+ * (Eighth Schedule, Table-I). 18% is the standard rate that devices, cosmetics
+ * and general consumables attract. 0% is for anything genuinely exempt, or
+ * where the tax was already discharged upstream and you do not show it again.
+ *
+ * Rates move with each Finance Act — confirm yours with your tax adviser.
+ */
+const TAX_RATES: { rate: number; label: string }[] = [
+  { rate: 0, label: '0% — exempt / not shown' },
+  { rate: 1, label: '1% — registered drug' },
+  { rate: 18, label: '18% — standard rate' },
+];
 
-const BLANK: Partial<Product> = {
+const blankProduct = (defaultTaxRate: number): Partial<Product> => ({
   name: '', genericName: '', manufacturer: '', category: 'General', form: 'Tablet',
-  strength: '', packSize: '', hsn: '3004', gstRate: 12, unit: 'strip', rack: '',
+  strength: '', packSize: '', hsCode: '3004', taxRate: defaultTaxRate, unit: 'strip', rack: '',
   reorderLevel: 20, prescriptionRequired: false, barcode: '', notes: '',
-};
+});
 
 export function ProductForm({ product, onClose }: { product: Product | null; onClose: () => void }) {
-  const { setProducts, notify, reportError } = useStore();
-  const [draft, setDraft] = useState<Partial<Product>>(product ?? BLANK);
+  const { settings, setProducts, notify, reportError } = useStore();
+  const [draft, setDraft] = useState<Partial<Product>>(
+    product ?? blankProduct(settings.defaultTaxRate ?? 1),
+  );
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -60,14 +76,14 @@ export function ProductForm({ product, onClose }: { product: Product | null; onC
       <div className="form-grid">
         <div className="span-2">
           <Field label="Brand name">
-            <input className="input" value={draft.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Dolo 650" />
+            <input className="input" value={draft.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Panadol 500mg" />
           </Field>
         </div>
         <Field label="Generic name / salt">
           <input className="input" value={draft.genericName ?? ''} onChange={(e) => set('genericName', e.target.value)} placeholder="Paracetamol" />
         </Field>
         <Field label="Manufacturer">
-          <input className="input" value={draft.manufacturer ?? ''} onChange={(e) => set('manufacturer', e.target.value)} placeholder="Micro Labs" />
+          <input className="input" value={draft.manufacturer ?? ''} onChange={(e) => set('manufacturer', e.target.value)} placeholder="Getz Pharma" />
         </Field>
         <Field label="Category">
           <select className="select" value={draft.category} onChange={(e) => set('category', e.target.value)}>
@@ -80,18 +96,21 @@ export function ProductForm({ product, onClose }: { product: Product | null; onC
           </select>
         </Field>
         <Field label="Strength">
-          <input className="input" value={draft.strength ?? ''} onChange={(e) => set('strength', e.target.value)} placeholder="650mg" />
+          <input className="input" value={draft.strength ?? ''} onChange={(e) => set('strength', e.target.value)} placeholder="500mg" />
         </Field>
         <Field label="Pack size">
-          <input className="input" value={draft.packSize ?? ''} onChange={(e) => set('packSize', e.target.value)} placeholder="15 tablets" />
+          <input className="input" value={draft.packSize ?? ''} onChange={(e) => set('packSize', e.target.value)} placeholder="10 tablets" />
         </Field>
-        <Field label="GST rate" hint="Prices are entered inclusive of GST.">
-          <select className="select" value={draft.gstRate} onChange={(e) => set('gstRate', Number(e.target.value))}>
-            {GST_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
+        <Field label="Sales tax rate" hint="Prices are entered inclusive of this rate.">
+          <select className="select" value={draft.taxRate} onChange={(e) => set('taxRate', Number(e.target.value))}>
+            {TAX_RATES.map(({ rate, label }) => <option key={rate} value={rate}>{label}</option>)}
+            {draft.taxRate !== undefined && !TAX_RATES.some((r) => r.rate === draft.taxRate) && (
+              <option value={draft.taxRate}>{draft.taxRate}% — set in Settings</option>
+            )}
           </select>
         </Field>
-        <Field label="HSN code">
-          <input className="input" value={draft.hsn ?? ''} onChange={(e) => set('hsn', e.target.value)} />
+        <Field label="HS code">
+          <input className="input" value={draft.hsCode ?? ''} onChange={(e) => set('hsCode', e.target.value)} />
         </Field>
         <Field label="Rack / shelf" hint="Where to find it on the wall.">
           <input className="input" value={draft.rack ?? ''} onChange={(e) => set('rack', e.target.value)} placeholder="B3" />

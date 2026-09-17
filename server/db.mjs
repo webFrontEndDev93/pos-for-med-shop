@@ -24,7 +24,8 @@ export function emptyDb() {
       email: 'care@medipos.example',
       // Left blank on purpose: the receipt omits an empty tax number rather
       // than printing a made-up one. Fill in your own from Settings.
-      gstin: '',
+      ntn: '',
+      strn: '',
       drugLicense: 'ISB-2024-4471',
       pharmacist: 'Dr. A. Khan, Pharm-D',
       currency: 'PKR',
@@ -33,6 +34,10 @@ export function emptyDb() {
       nextInvoiceSeq: 1,
       lowStockThreshold: 20,
       expiryAlertDays: 90,
+      // Sales tax applied to a new medicine unless you change it on the product.
+      // 1% is the concessional rate for drugs registered under the Drugs Act;
+      // devices, cosmetics and general goods are normally the standard rate.
+      defaultTaxRate: 1,
       roundOffTotals: true,
       footerNote: 'Medicines once sold are not returnable without a valid bill.',
     },
@@ -60,6 +65,26 @@ function migrate(db) {
   }
   for (const payment of db.payments) {
     if (payment.mode === 'upi') payment.mode = 'digital';
+  }
+
+  // India's GST fields become Pakistan's single sales tax. Rates and totals are
+  // carried over untouched — only the names change, so past bills still add up.
+  const renameTax = (row) => {
+    if (row.gstRate !== undefined && row.taxRate === undefined) row.taxRate = row.gstRate;
+    if (row.hsn !== undefined && row.hsCode === undefined) row.hsCode = row.hsn;
+    delete row.gstRate;
+    delete row.hsn;
+  };
+  for (const product of db.products) renameTax(product);
+  for (const sale of db.sales) {
+    for (const item of sale.items) renameTax(item);
+    // CGST/SGST were only ever `tax` halved; the single `tax` figure is the truth.
+    delete sale.cgst;
+    delete sale.sgst;
+  }
+  if (db.settings.gstin !== undefined) {
+    if (!db.settings.ntn) db.settings.ntn = db.settings.gstin;
+    delete db.settings.gstin;
   }
 }
 

@@ -477,10 +477,7 @@ export function Billing() {
                   <span>Taxable value</span><span className="value">{money(totals.taxableValue)}</span>
                 </div>
                 <div className="totals-row totals-row--muted">
-                  <span>CGST</span><span className="value">{money(totals.cgst)}</span>
-                </div>
-                <div className="totals-row totals-row--muted">
-                  <span>SGST</span><span className="value">{money(totals.sgst)}</span>
+                  <span>Sales tax</span><span className="value">{money(totals.tax)}</span>
                 </div>
                 {totals.roundOff !== 0 && (
                   <div className="totals-row totals-row--muted">

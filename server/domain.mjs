@@ -23,11 +23,11 @@ export const isExpired = (isoDate) => daysUntil(isoDate) < 0;
  * Totals for one cart line.
  * `discountPct` applies to the gross line amount before tax is split out.
  */
-export function lineTotals({ salePrice, qty, gstRate = 0, discountPct = 0 }) {
+export function lineTotals({ salePrice, qty, taxRate = 0, discountPct = 0 }) {
   const gross = round2(Number(salePrice) * Number(qty));
   const discount = round2((gross * Number(discountPct)) / 100);
   const net = round2(gross - discount);
-  const taxable = round2(net / (1 + Number(gstRate) / 100));
+  const taxable = round2(net / (1 + Number(taxRate) / 100));
   const tax = round2(net - taxable);
   return { gross, discount, net, taxable, tax };
 }
@@ -59,9 +59,6 @@ export function billTotals(lines, { extraDiscount = 0, roundOff = true } = {}) {
     extraDiscount: capped,
     taxableValue: taxable,
     tax,
-    // CGST/SGST split for an intra-state sale, which is the common case.
-    cgst: round2(tax / 2),
-    sgst: round2(tax / 2),
     subtotal: net,
     roundOff: roundOffAmount,
     total: round2(rounded),

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
-import { money } from '../lib/format';
+import { moneyShort } from '../lib/format';
 import type { Settings } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Button, ConfirmDialog, Field, Stat, Switch } from '../components/ui';
@@ -129,8 +129,11 @@ export function SettingsPage() {
               <Field label="Email">
                 <input className="input" value={draft.email ?? ''} onChange={(e) => set('email', e.target.value)} />
               </Field>
-              <Field label="GSTIN">
-                <input className="input mono" value={draft.gstin ?? ''} onChange={(e) => set('gstin', e.target.value)} />
+              <Field label="NTN" hint="National Tax Number. Left off the receipt when blank.">
+                <input className="input mono" value={draft.ntn ?? ''} onChange={(e) => set('ntn', e.target.value)} />
+              </Field>
+              <Field label="STRN" hint="Sales Tax Registration Number, if you are registered.">
+                <input className="input mono" value={draft.strn ?? ''} onChange={(e) => set('strn', e.target.value)} />
               </Field>
               <Field label="Drug licence number">
                 <input className="input mono" value={draft.drugLicense ?? ''} onChange={(e) => set('drugLicense', e.target.value)} />
@@ -185,6 +188,16 @@ export function SettingsPage() {
                   onChange={(e) => set('expiryAlertDays', Number(e.target.value))}
                 />
               </Field>
+              <Field
+                label="Default sales tax rate (%)"
+                hint="Applied to a new medicine until you set its own rate. Registered drugs are usually 1%."
+              >
+                <input
+                  className="input input--num" type="number" min={0} max={100} step="0.5"
+                  value={draft.defaultTaxRate ?? 1}
+                  onChange={(e) => set('defaultTaxRate', Number(e.target.value))}
+                />
+              </Field>
             </div>
 
             <div className="setting-row" style={{ marginTop: 'var(--space-4)' }}>
@@ -217,7 +230,7 @@ export function SettingsPage() {
               <Stat label="Medicines" value={products.length} foot={`${liveBatches} batches in stock`} tone="brand" icon="pill" />
               <Stat label="Customers" value={customers.length} foot="Including udhaar accounts" tone="info" icon="customers" />
               <Stat label="Recent bills" value={recentSales.length} foot="Last 50 kept in memory" tone="neutral" icon="receipt" />
-              <Stat label="Stock value" value={money(stockValue)} foot="At purchase cost" tone="success" icon="box" />
+              <Stat label="Stock value" value={moneyShort(stockValue)} foot="At purchase cost" tone="success" icon="box" />
             </div>
 
             <div className="setting-row">

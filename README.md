@@ -18,8 +18,13 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
   and rejected by the server even if a stale browser tab tries to bill one.
 - **Prescription-only medicine needs a paper trail.** Adding an Rx item to a bill makes
   the prescription reference mandatory before payment can be taken.
-- **Prices are tax-inclusive.** MRP is printed on the pack, so tax is *back-calculated*
-  out of the line total rather than added on top.
+- **Prices are tax-inclusive.** MRP is printed on the pack, so sales tax is
+  *back-calculated* out of the line total rather than added on top, and appears as a
+  single line — Pakistan levies one federal sales tax, not a split.
+- **The tax rate belongs to the product.** Drugs registered under the Drugs Act 1976
+  attract a concessional rate, while devices, cosmetics and general consumables sit at
+  the standard rate, so a single shop-wide rate would be wrong. The demo data ships
+  registered medicines at 1% and non-drug lines at 18%.
 - **Regulars buy on udhaar.** Bills can be part-paid or fully deferred to a customer's
   account, with a ledger and settlement flow.
 - **Money is in Pakistani rupees**, formatted `Rs 1,842,424.50`. Four tenders are
@@ -38,8 +43,9 @@ npm run build     # compile the frontend into dist/
 npm start         # serve the app and API on http://localhost:4173
 ```
 
-The first run seeds a demo shop (42 medicines, ~84 batches, 12 customers and about
-three months of trade) so every screen has something real to show. Delete
+The first run seeds a demo shop — 50 medicines from a Pakistani shelf (Panadol,
+Augmentin, Risek, Ventolin, Surbex Z and so on), their batches, 12 customers and about
+three months of trade — so every screen has something real to show. Delete
 `server/data/db.json` and restart to begin from empty, or run `npm run seed` to reset
 the demo data.
 
@@ -160,25 +166,37 @@ udhaar records has lost the business's memory.
   but there is no login, no per-user audit trail and no locking between tills.
 - No purchase orders, supplier ledger, or sales-tax return filing.
 - Udhaar is tracked per customer as a running balance, not as an aged-debtor report.
-- **The tax lines still read CGST/SGST**, which is an Indian split rather than a
-  Pakistani one, and the demo catalogue is stocked with Indian brands. Both are
-  cosmetic — the arithmetic is a plain tax-inclusive back-calculation — but they
-  need replacing before the app is used in a real Pakistani shop. See below.
+- Sales tax is a single rate per product. There is no separate further-tax, extra-tax
+  or withholding handling, and no sales-tax return output.
 
-## Still to localise for Pakistan
+## Sales tax
 
-The currency and tenders are done. Two things are knowingly left as they were,
-because both need a decision rather than a guess:
+Bills show one **Sales tax** line, back-calculated out of the tax-inclusive MRP. The
+rate is set per product (Inventory → edit a medicine → Sales tax rate), with a
+shop-wide default in Settings for newly added products.
 
-1. **Tax presentation.** Bills print `CGST` and `SGST`, which is the Indian
-   intra-state split. Pakistan levies a single sales tax, and most pharmaceutical
-   products are exempt. The totals are computed as a plain tax-inclusive
-   back-calculation, so the arithmetic is unaffected — only the labels and the
-   split are wrong. Deciding this needs your actual position: exempt, a single
-   sales-tax line, or a rate per product.
-2. **The demo catalogue.** The seeded medicines, manufacturers, customer names,
-   phone numbers and suppliers are Indian. It is demo data that a real shop
-   replaces, but it makes the first run read oddly next to rupee amounts.
+The presets are the three a pharmacy actually reaches for:
 
-The `gstin` setting is also still named for the Indian identifier; it now defaults
-to blank, and the receipt omits it when empty rather than printing something false.
+| Rate | For |
+| --- | --- |
+| `0%` | Exempt, or tax already discharged upstream and not shown again |
+| `1%` | Drugs registered under the Drugs Act 1976 — the concessional rate |
+| `18%` | Standard rate: devices, cosmetics, general consumables |
+
+A caveat worth reading before you trade on this. Pakistan charges DRAP-registered
+allopathic medicines a concessional **1%** under Entry 81 of Table-I of the Eighth
+Schedule to the Sales Tax Act 1990, and that tax is treated as a **final discharge in
+the supply chain** — collected by the manufacturer or importer, with no input-tax
+adjustment further down. So a retail chemist is often not adding output tax on those
+lines at all, and `0%` may represent your position better than `1%`. Non-drug goods
+carry the standard 18%.
+
+These rates move with every Finance Act, and there have been active budget proposals
+to zero-rate registered pharmaceuticals. **Confirm your own position with your tax
+adviser and set the rates accordingly** — the app makes them editable precisely
+because they are not ours to assume. Enter your NTN and STRN in Settings; each is
+omitted from the receipt while blank rather than printing something false.
+
+Sources: [FBR clarification on the 1% rate](https://www.brecorder.com/news/40209257),
+[sales tax structure for pharmaceuticals](https://www.brecorder.com/news/40247020),
+[tax rules for a pharmacy business](https://sohaibnsultan.pk/tax-laws-applying-to-a-pharmacy-business-in-pakistan-a-complete-guide-for-2026/).

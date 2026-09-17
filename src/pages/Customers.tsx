@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
-import { formatDate, formatDateTime, money, relativeTime } from '../lib/format';
+import { formatDate, formatDateTime, money, moneyShort, relativeTime } from '../lib/format';
 import type { Customer, Payment, Sale } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Modal, Stat } from '../components/ui';
@@ -94,7 +94,7 @@ export function Customers() {
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 'var(--space-4)' }}>
-        <Stat label="Udhaar outstanding" value={money(outstanding)} foot="Money owed to the shop" tone={outstanding > 0 ? 'warning' : 'success'} icon="wallet" />
+        <Stat label="Udhaar outstanding" value={moneyShort(outstanding)} foot="Money owed to the shop" tone={outstanding > 0 ? 'warning' : 'success'} icon="wallet" />
         <Stat label="On udhaar" value={withCredit} foot="Customers with a balance" tone="info" icon="customers" />
         <Stat label="Total customers" value={customers.length} foot="Including walk-ins you saved" tone="brand" icon="user" />
       </div>

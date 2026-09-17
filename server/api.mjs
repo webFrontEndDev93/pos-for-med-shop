@@ -28,7 +28,7 @@ const num = (v, fallback = 0) => {
 
 /* ------------------------------------------------------------------ products */
 
-function productPayload(body) {
+function productPayload(body, settings) {
   const name = str(body.name);
   if (!name) throw bad('Product name is required.');
   return {
@@ -39,8 +39,8 @@ function productPayload(body) {
     form: str(body.form, 'Tablet'),
     strength: str(body.strength),
     packSize: str(body.packSize),
-    hsn: str(body.hsn),
-    gstRate: num(body.gstRate, 12),
+    hsCode: str(body.hsCode),
+    taxRate: num(body.taxRate, settings?.defaultTaxRate ?? 1),
     unit: str(body.unit, 'strip'),
     rack: str(body.rack),
     reorderLevel: Math.max(0, Math.round(num(body.reorderLevel, 20))),
@@ -126,13 +126,13 @@ function createSale(db, body) {
         form: product.form,
         batchNo: batch.batchNo,
         expiry: batch.expiry,
-        hsn: product.hsn,
+        hsCode: product.hsCode,
         unit: product.unit,
         qty,
         mrp: batch.mrp,
         salePrice: batch.salePrice,
         costPrice: batch.costPrice,
-        gstRate: product.gstRate,
+        taxRate: product.taxRate,
         discountPct,
       },
     };
@@ -354,7 +354,7 @@ export const routes = [
   ['GET', '/api/products', () => readDb().products],
   ['POST', '/api/products', (_p, body) =>
     writeDb((db) => {
-      const product = { id: id('prd'), createdAt: new Date().toISOString(), ...productPayload(body) };
+      const product = { id: id('prd'), createdAt: new Date().toISOString(), ...productPayload(body, db.settings) };
       db.products.push(product);
       return product;
     })],
@@ -362,7 +362,7 @@ export const routes = [
     writeDb((db) => {
       const product = db.products.find((x) => x.id === p.id);
       if (!product) throw notFound('Product not found.');
-      Object.assign(product, productPayload({ ...product, ...body }));
+      Object.assign(product, productPayload({ ...product, ...body }, db.settings));
       return product;
     })],
   ['DELETE', '/api/products/:id', (p) =>
@@ -498,6 +498,7 @@ export const routes = [
       next.lowStockThreshold = Math.max(0, Math.round(num(next.lowStockThreshold, 20)));
       next.expiryAlertDays = Math.max(1, Math.round(num(next.expiryAlertDays, 90)));
       next.nextInvoiceSeq = Math.max(1, Math.round(num(next.nextInvoiceSeq, 1)));
+      next.defaultTaxRate = Math.min(Math.max(num(next.defaultTaxRate, 1), 0), 100);
       db.settings = next;
       return db.settings;
     })],

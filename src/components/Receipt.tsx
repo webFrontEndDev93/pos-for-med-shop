@@ -16,6 +16,9 @@ const MODE_LABEL: Record<string, string> = {
  */
 export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) {
   const savings = sale.items.reduce((s, i) => s + (i.mrp - i.salePrice) * i.qty, 0) + sale.discount;
+  // One rate on most bills, so print it; a mixed bill just says "Sales tax".
+  const rates = [...new Set(sale.items.map((i) => i.taxRate))].sort((a, b) => a - b);
+  const taxRates = rates.length === 1 ? `${rates[0]}%` : '';
 
   return (
     <div className="receipt">
@@ -25,7 +28,8 @@ export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) 
         <div>{settings.addressLine2}</div>
         <div>Ph: {settings.phone}</div>
         {settings.drugLicense && <div>DL No: {settings.drugLicense}</div>}
-        {settings.gstin && <div>GSTIN: {settings.gstin}</div>}
+        {settings.ntn && <div>NTN: {settings.ntn}</div>}
+        {settings.strn && <div>STRN: {settings.strn}</div>}
       </div>
 
       <hr className="receipt-rule" />
@@ -85,10 +89,7 @@ export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) 
         <span>Taxable value</span><span>{plain(sale.taxableValue)}</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>CGST</span><span>{plain(sale.cgst)}</span>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>SGST</span><span>{plain(sale.sgst)}</span>
+        <span>Sales tax{taxRates && ` (${taxRates})`}</span><span>{plain(sale.tax)}</span>
       </div>
       {sale.roundOff !== 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -324,8 +324,12 @@ svg { display: block; flex-shrink: 0; }
   display: flex; align-items: center; gap: var(--space-2);
 }
 .stat-value {
-  font-size: var(--text-xl); font-weight: 680; letter-spacing: -0.03em;
+  /* Shrinks rather than wraps: a seven-figure rupee total would otherwise break
+     "Rs" onto its own line inside a narrow tile. */
+  font-size: clamp(1.3rem, 1.6vw + 0.55rem, var(--text-xl));
+  font-weight: 680; letter-spacing: -0.03em;
   margin-top: var(--space-2); font-variant-numeric: tabular-nums; line-height: 1.15;
+  white-space: nowrap;
 }
 .stat-foot { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-muted); }
 .stat-accent { position: absolute; inset: 0 auto 0 0; width: 3px; }

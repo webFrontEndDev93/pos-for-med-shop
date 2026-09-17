@@ -3,7 +3,8 @@
  * totals while the cart is being built. The server recomputes everything at
  * checkout and its numbers are the ones that get stored.
  *
- * Prices are GST-inclusive, so tax is split out of the total rather than added.
+ * Prices are tax-inclusive, so sales tax is split out of the total rather than
+ * added. Pakistan levies one federal sales tax, so there is a single figure.
  */
 import type { CartLine } from './types';
 
@@ -21,7 +22,7 @@ export function lineTotals(line: Pick<CartLine, 'batch' | 'qty' | 'discountPct' 
   const gross = round2(line.batch.salePrice * line.qty);
   const discount = round2((gross * line.discountPct) / 100);
   const net = round2(gross - discount);
-  const taxable = round2(net / (1 + line.product.gstRate / 100));
+  const taxable = round2(net / (1 + line.product.taxRate / 100));
   return { gross, discount, net, taxable, tax: round2(net - taxable) };
 }
 
@@ -32,8 +33,6 @@ export interface BillTotals {
   extraDiscount: number;
   taxableValue: number;
   tax: number;
-  cgst: number;
-  sgst: number;
   subtotal: number;
   roundOff: number;
   total: number;
@@ -64,8 +63,6 @@ export function billTotals(lines: CartLine[], extraDiscount = 0, roundOff = true
     extraDiscount: capped,
     taxableValue: taxable,
     tax,
-    cgst: round2(tax / 2),
-    sgst: round2(tax / 2),
     subtotal: net,
     roundOff: round2(rounded - payable),
     total: round2(rounded),

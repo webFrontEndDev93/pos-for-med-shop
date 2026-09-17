@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useStore } from '../lib/store';
-import { addDays, formatDateTime, money, startOfMonth, todayISO } from '../lib/format';
+import { addDays, formatDateTime, money, moneyShort, startOfMonth, todayISO } from '../lib/format';
 import type { ReportSummary, Sale } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Modal, Stat } from '../components/ui';
@@ -172,42 +172,42 @@ export function Reports() {
           <div className="stat-grid stat-grid--report" style={{ marginBottom: 'var(--space-4)' }}>
             <Stat
               label="Revenue"
-              value={money(summary.totals.revenue)}
+              value={moneyShort(summary.totals.revenue)}
               foot={`${summary.totals.bills} bills · ${summary.totals.itemsSold} items`}
               tone="brand"
               icon="wallet"
             />
             <Stat
               label="Gross profit"
-              value={money(summary.totals.profit)}
+              value={moneyShort(summary.totals.profit)}
               foot={`${margin}% margin on taxable value`}
               tone={summary.totals.profit >= 0 ? 'success' : 'danger'}
               icon="trendUp"
             />
             <Stat
               label="Average bill"
-              value={money(summary.totals.averageBill)}
+              value={moneyShort(summary.totals.averageBill)}
               foot={`${money(summary.totals.discount)} given as discount`}
               tone="info"
               icon="receipt"
             />
             <Stat
-              label="GST collected"
-              value={money(summary.totals.tax)}
-              foot="CGST + SGST on these bills"
+              label="Sales tax collected"
+              value={moneyShort(summary.totals.tax)}
+              foot="Included in the totals above"
               tone="neutral"
               icon="shield"
             />
             <Stat
               label="Stock on hand"
-              value={money(summary.stockValue)}
+              value={moneyShort(summary.stockValue)}
               foot="Valued at purchase cost"
               tone="brand"
               icon="box"
             />
             <Stat
               label="Udhaar outstanding"
-              value={money(summary.creditOutstanding)}
+              value={moneyShort(summary.creditOutstanding)}
               foot="Owed by customers across all time"
               tone={summary.creditOutstanding > 0 ? 'warning' : 'success'}
               icon="clock"

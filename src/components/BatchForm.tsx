@@ -68,7 +68,7 @@ export function BatchForm({
   return (
     <Modal
       title={batch ? `Edit batch ${batch.batchNo}` : `Receive stock — ${product.name}`}
-      subtitle="MRP and sale price are GST-inclusive, exactly as printed on the pack."
+      subtitle="MRP and sale price include sales tax, exactly as printed on the pack."
       width="38rem"
       onClose={onClose}
       footer={
@@ -86,7 +86,7 @@ export function BatchForm({
             className="input mono"
             value={draft.batchNo ?? ''}
             onChange={(e) => set('batchNo', e.target.value.toUpperCase())}
-            placeholder="DOL2417"
+            placeholder="PAN2417"
           />
         </Field>
         <Field
@@ -148,7 +148,7 @@ export function BatchForm({
             className="input"
             value={draft.supplier ?? ''}
             onChange={(e) => set('supplier', e.target.value)}
-            placeholder="Karnataka Medical Agencies"
+            placeholder="Muller &amp; Phipps Pakistan"
           />
         </Field>
         <Field label="Received on">

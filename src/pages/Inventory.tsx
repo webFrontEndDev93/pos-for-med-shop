@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { stockFor, useStore } from '../lib/store';
-import { daysUntil, expiryLabel, formatDate, fuzzyScore, money, todayISO } from '../lib/format';
+import { daysUntil, expiryLabel, formatDate, fuzzyScore, money, moneyShort, todayISO } from '../lib/format';
 import type { Batch, Product } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Stat } from '../components/ui';
@@ -149,7 +149,7 @@ export function Inventory() {
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 'var(--space-4)' }}>
-        <Stat label="Stock value" value={money(stockValue)} foot="At purchase cost" tone="brand" icon="box" />
+        <Stat label="Stock value" value={moneyShort(stockValue)} foot="At purchase cost" tone="brand" icon="box" />
         <Stat
           label="Low stock"
           value={alerts.lowStock.length}

@@ -1,3 +1,9 @@
+/** One selectable row in the shop's sales-tax rate list. */
+export interface TaxRateOption {
+  rate: number;
+  label: string;
+}
+
 export interface Settings {
   shopName: string;
   addressLine1: string;
@@ -15,6 +21,7 @@ export interface Settings {
   lowStockThreshold: number;
   expiryAlertDays: number;
   defaultTaxRate: number;
+  taxRates: TaxRateOption[];
   roundOffTotals: boolean;
   footerNote: string;
 }

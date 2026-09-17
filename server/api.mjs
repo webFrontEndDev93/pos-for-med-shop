@@ -1,4 +1,4 @@
-import { readDb, writeDb, replaceDb, backup, id } from './db.mjs';
+import { readDb, writeDb, replaceDb, backup, id, DEFAULT_TAX_RATES } from './db.mjs';
 import {
   round2,
   todayISO,
@@ -40,7 +40,7 @@ function productPayload(body, settings) {
     strength: str(body.strength),
     packSize: str(body.packSize),
     hsCode: str(body.hsCode),
-    taxRate: num(body.taxRate, settings?.defaultTaxRate ?? 1),
+    taxRate: Math.min(Math.max(num(body.taxRate, settings?.defaultTaxRate ?? 0), 0), 100),
     unit: str(body.unit, 'strip'),
     rack: str(body.rack),
     reorderLevel: Math.max(0, Math.round(num(body.reorderLevel, 20))),
@@ -88,6 +88,28 @@ function customerPayload(body) {
     doctor: str(body.doctor),
     notes: str(body.notes),
   };
+}
+
+/**
+ * Cleans up the shop's editable rate list: drops junk rows, clamps each rate to
+ * 0-100, collapses duplicates, sorts, and never returns an empty list — a
+ * product form with no rates to choose from would be a dead end.
+ */
+function normaliseTaxRates(input) {
+  if (!Array.isArray(input)) return DEFAULT_TAX_RATES.map((r) => ({ ...r }));
+
+  const seen = new Map();
+  for (const row of input.slice(0, 20)) {
+    if (!row || typeof row !== 'object') continue;
+    const rate = Math.round(Math.min(Math.max(num(row.rate, -1), 0), 100) * 100) / 100;
+    if (rate < 0 || !Number.isFinite(rate)) continue;
+    if (num(row.rate, -1) < 0) continue;
+    const label = str(row.label).slice(0, 48) || `${rate}%`;
+    if (!seen.has(rate)) seen.set(rate, { rate, label });
+  }
+
+  const cleaned = [...seen.values()].sort((a, b) => a.rate - b.rate);
+  return cleaned.length > 0 ? cleaned : DEFAULT_TAX_RATES.map((r) => ({ ...r }));
 }
 
 /* ------------------------------------------------------------------ checkout */
@@ -498,7 +520,8 @@ export const routes = [
       next.lowStockThreshold = Math.max(0, Math.round(num(next.lowStockThreshold, 20)));
       next.expiryAlertDays = Math.max(1, Math.round(num(next.expiryAlertDays, 90)));
       next.nextInvoiceSeq = Math.max(1, Math.round(num(next.nextInvoiceSeq, 1)));
-      next.defaultTaxRate = Math.min(Math.max(num(next.defaultTaxRate, 1), 0), 100);
+      next.defaultTaxRate = Math.min(Math.max(num(next.defaultTaxRate, 0), 0), 100);
+      next.taxRates = normaliseTaxRates(next.taxRates);
       db.settings = next;
       return db.settings;
     })],

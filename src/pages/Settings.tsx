@@ -190,14 +190,81 @@ export function SettingsPage() {
               </Field>
               <Field
                 label="Default sales tax rate (%)"
-                hint="Applied to a new medicine until you set its own rate. Registered drugs are usually 1%."
+                hint="Applied to a new medicine until you set its own rate."
               >
                 <input
                   className="input input--num" type="number" min={0} max={100} step="0.5"
-                  value={draft.defaultTaxRate ?? 1}
+                  value={draft.defaultTaxRate ?? 0}
                   onChange={(e) => set('defaultTaxRate', Number(e.target.value))}
                 />
               </Field>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-5)' }}>
+              <div className="row-between" style={{ marginBottom: 'var(--space-2)' }}>
+                <div>
+                  <div className="setting-name">Sales tax rates</div>
+                  <div className="setting-desc">
+                    The rates you can pick from when editing a medicine. Rates move with each
+                    Finance Act, so this list is yours to change — confirm your position with
+                    your tax adviser.
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  icon="plus"
+                  onClick={() =>
+                    set('taxRates', [...(draft.taxRates ?? []), { rate: 0, label: '' }])
+                  }
+                >
+                  Add rate
+                </Button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+                {(draft.taxRates ?? []).map((row, index) => (
+                  <div className="row" key={index} style={{ gap: 'var(--space-2)' }}>
+                    <input
+                      className="input input--num"
+                      type="number" min={0} max={100} step="0.5"
+                      style={{ width: '6rem' }}
+                      value={row.rate}
+                      aria-label={`Rate ${index + 1} percent`}
+                      onChange={(e) => {
+                        const next = [...(draft.taxRates ?? [])];
+                        next[index] = { ...row, rate: Number(e.target.value) };
+                        set('taxRates', next);
+                      }}
+                    />
+                    <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>%</span>
+                    <input
+                      className="input grow"
+                      placeholder="What this rate is for"
+                      value={row.label}
+                      aria-label={`Rate ${index + 1} label`}
+                      onChange={(e) => {
+                        const next = [...(draft.taxRates ?? [])];
+                        next[index] = { ...row, label: e.target.value };
+                        set('taxRates', next);
+                      }}
+                    />
+                    <Button
+                      variant="ghost" size="sm" iconOnly icon="trash"
+                      aria-label={`Remove the ${row.rate}% rate`}
+                      disabled={(draft.taxRates ?? []).length <= 1}
+                      onClick={() =>
+                        set('taxRates', (draft.taxRates ?? []).filter((_, i) => i !== index))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <p className="hint" style={{ marginTop: 'var(--space-2)' }}>
+                Saving tidies the list: rates are clamped to 0–100%, duplicates collapse and
+                rows are sorted. A rate already used by a medicine is kept selectable even if
+                you remove it here.
+              </p>
             </div>
 
             <div className="setting-row" style={{ marginTop: 'var(--space-4)' }}>

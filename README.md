@@ -166,16 +166,27 @@ udhaar records has lost the business's memory.
   but there is no login, no per-user audit trail and no locking between tills.
 - No purchase orders, supplier ledger, or sales-tax return filing.
 - Udhaar is tracked per customer as a running balance, not as an aged-debtor report.
-- Sales tax is a single rate per product. There is no separate further-tax, extra-tax
-  or withholding handling, and no sales-tax return output.
+- Sales tax is a single rate per product, chosen from a list you configure. There is
+  no separate further-tax, extra-tax or withholding handling, and no sales-tax return
+  output.
 
 ## Sales tax
 
 Bills show one **Sales tax** line, back-calculated out of the tax-inclusive MRP. The
-rate is set per product (Inventory → edit a medicine → Sales tax rate), with a
-shop-wide default in Settings for newly added products.
+rate is set per product (Inventory → edit a medicine → Sales tax rate).
 
-The presets are the three a pharmacy actually reaches for:
+**Nothing about tax is hardcoded.** Settings → Billing behaviour holds both:
+
+- **The rate list** — the options offered when editing a medicine. Add, remove or
+  relabel rows as your position changes. Saving tidies the list: rates are clamped to
+  0–100%, duplicates collapse and rows sort by rate. A rate already used by a medicine
+  stays selectable even if you delete it here, so removing a row can never silently
+  re-tax stock you have already priced.
+- **The default rate** applied to a newly added medicine until you give it its own.
+
+![Sales tax rates in Settings](docs/screens/tax-rates.png)
+
+A new shop starts with three rows and a **0% default**:
 
 | Rate | For |
 | --- | --- |
@@ -193,8 +204,9 @@ carry the standard 18%.
 
 These rates move with every Finance Act, and there have been active budget proposals
 to zero-rate registered pharmaceuticals. **Confirm your own position with your tax
-adviser and set the rates accordingly** — the app makes them editable precisely
-because they are not ours to assume. Enter your NTN and STRN in Settings; each is
+adviser and set the rates accordingly** — the app makes both the list and the default
+editable precisely because they are not ours to assume. The default ships at 0% for
+that reason. Enter your NTN and STRN in Settings; each is
 omitted from the receipt while blank rather than printing something false.
 
 Sources: [FBR clarification on the 1% rate](https://www.brecorder.com/news/40209257),

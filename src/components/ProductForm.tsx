@@ -6,22 +6,6 @@ import { Button, Field, Modal, Switch } from './ui';
 
 const FORMS = ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Cream', 'Gel', 'Drops', 'Inhaler', 'Spray', 'Powder', 'Lozenge', 'Device', 'Other'];
 const CATEGORIES = ['Analgesic', 'Antibiotic', 'Gastro', 'Cardiac', 'Diabetes', 'Respiratory', 'Antihistamine', 'Hormone', 'Supplement', 'Topical', 'Antiseptic', 'Cold & Flu', 'Electrolyte', 'Device', 'Consumable', 'General'];
-/**
- * Pakistani sales-tax rates a pharmacy actually uses.
- *
- * 1% is the concessional rate for drugs registered under the Drugs Act 1976
- * (Eighth Schedule, Table-I). 18% is the standard rate that devices, cosmetics
- * and general consumables attract. 0% is for anything genuinely exempt, or
- * where the tax was already discharged upstream and you do not show it again.
- *
- * Rates move with each Finance Act — confirm yours with your tax adviser.
- */
-const TAX_RATES: { rate: number; label: string }[] = [
-  { rate: 0, label: '0% — exempt / not shown' },
-  { rate: 1, label: '1% — registered drug' },
-  { rate: 18, label: '18% — standard rate' },
-];
-
 const blankProduct = (defaultTaxRate: number): Partial<Product> => ({
   name: '', genericName: '', manufacturer: '', category: 'General', form: 'Tablet',
   strength: '', packSize: '', hsCode: '3004', taxRate: defaultTaxRate, unit: 'strip', rack: '',
@@ -31,8 +15,15 @@ const blankProduct = (defaultTaxRate: number): Partial<Product> => ({
 export function ProductForm({ product, onClose }: { product: Product | null; onClose: () => void }) {
   const { settings, setProducts, notify, reportError } = useStore();
   const [draft, setDraft] = useState<Partial<Product>>(
-    product ?? blankProduct(settings.defaultTaxRate ?? 1),
+    product ?? blankProduct(settings.defaultTaxRate ?? 0),
   );
+
+  // The shop's own list, set in Settings. A rate already on this product stays
+  // selectable even if it has since been removed from the list.
+  const taxRates = settings.taxRates ?? [];
+  const options = taxRates.some((r) => r.rate === draft.taxRate)
+    ? taxRates
+    : [...taxRates, { rate: draft.taxRate ?? 0, label: 'In use' }].sort((a, b) => a.rate - b.rate);
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof Product>(key: K, value: Product[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -101,12 +92,11 @@ export function ProductForm({ product, onClose }: { product: Product | null; onC
         <Field label="Pack size">
           <input className="input" value={draft.packSize ?? ''} onChange={(e) => set('packSize', e.target.value)} placeholder="10 tablets" />
         </Field>
-        <Field label="Sales tax rate" hint="Prices are entered inclusive of this rate.">
+        <Field label="Sales tax rate" hint="Prices are entered inclusive of this rate. Edit the list in Settings.">
           <select className="select" value={draft.taxRate} onChange={(e) => set('taxRate', Number(e.target.value))}>
-            {TAX_RATES.map(({ rate, label }) => <option key={rate} value={rate}>{label}</option>)}
-            {draft.taxRate !== undefined && !TAX_RATES.some((r) => r.rate === draft.taxRate) && (
-              <option value={draft.taxRate}>{draft.taxRate}% — set in Settings</option>
-            )}
+            {options.map(({ rate, label }) => (
+              <option key={rate} value={rate}>{rate}% — {label}</option>
+            ))}
           </select>
         </Field>
         <Field label="HS code">

@@ -12,6 +12,17 @@ export const DATA_DIR = process.env.POS_DATA_DIR
 export const DB_FILE = path.join(DATA_DIR, 'db.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 
+/**
+ * The sales-tax rates a new shop starts with. These are a starting point, not a
+ * ruling: rates move with each Finance Act, so they are editable from Settings
+ * and nothing in the code assumes these particular numbers.
+ */
+export const DEFAULT_TAX_RATES = [
+  { rate: 0, label: 'Exempt / not shown' },
+  { rate: 1, label: 'Registered drug' },
+  { rate: 18, label: 'Standard rate' },
+];
+
 /** Shape of an empty database. Every collection is a plain array. */
 export function emptyDb() {
   return {
@@ -35,9 +46,12 @@ export function emptyDb() {
       lowStockThreshold: 20,
       expiryAlertDays: 90,
       // Sales tax applied to a new medicine unless you change it on the product.
-      // 1% is the concessional rate for drugs registered under the Drugs Act;
-      // devices, cosmetics and general goods are normally the standard rate.
-      defaultTaxRate: 1,
+      // 0% suits a retailer whose registered-drug tax was already discharged
+      // upstream; raise it if your shop accounts for output tax itself.
+      defaultTaxRate: 0,
+      // The rates offered when editing a medicine. Entirely yours to change —
+      // add, remove or relabel rows from Settings.
+      taxRates: DEFAULT_TAX_RATES.map((r) => ({ ...r })),
       roundOffTotals: true,
       footerNote: 'Medicines once sold are not returnable without a valid bill.',
     },
@@ -86,6 +100,20 @@ function migrate(db) {
     if (!db.settings.ntn) db.settings.ntn = db.settings.gstin;
     delete db.settings.gstin;
   }
+  if (!Array.isArray(db.settings.taxRates) || db.settings.taxRates.length === 0) {
+    db.settings.taxRates = DEFAULT_TAX_RATES.map((r) => ({ ...r }));
+  }
+  // Any rate already in use on a product must stay selectable, even if the
+  // shop's list no longer mentions it — otherwise editing that product would
+  // silently change its tax.
+  const listed = new Set(db.settings.taxRates.map((r) => r.rate));
+  for (const product of db.products) {
+    if (typeof product.taxRate === 'number' && !listed.has(product.taxRate)) {
+      db.settings.taxRates.push({ rate: product.taxRate, label: 'In use' });
+      listed.add(product.taxRate);
+    }
+  }
+  db.settings.taxRates.sort((a, b) => a.rate - b.rate);
 }
 
 function ensureDirs() {

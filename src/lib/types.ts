@@ -23,6 +23,10 @@ export interface Settings {
   defaultTaxRate: number;
   taxRates: TaxRateOption[];
   roundOffTotals: boolean;
+  backupEnabled: boolean;
+  backupIntervalHours: number;
+  backupKeep: number;
+  backupFolder: string;
   footerNote: string;
 }
 

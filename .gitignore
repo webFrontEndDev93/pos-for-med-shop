@@ -3,6 +3,7 @@
 
 # Build output
 /dist/
+/medipos-shop/
 *.tsbuildinfo
 
 # Shop data — generated on first run, and never something to commit:

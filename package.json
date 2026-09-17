@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "MediPOS — a lightweight, offline-first point of sale for medicine shops.",
+  "description": "MediPOS \u2014 a lightweight, offline-first point of sale for medicine shops.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -n server,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "node --watch server/index.mjs",
@@ -12,7 +15,8 @@
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "seed": "node server/seed.mjs --force",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",

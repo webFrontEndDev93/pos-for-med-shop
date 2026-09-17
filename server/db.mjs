@@ -53,6 +53,12 @@ export function emptyDb() {
       // add, remove or relabel rows from Settings.
       taxRates: DEFAULT_TAX_RATES.map((r) => ({ ...r })),
       roundOffTotals: true,
+      // Unattended backups. Point backupFolder at a USB stick or synced folder
+      // so a copy of the shop's records leaves the building.
+      backupEnabled: true,
+      backupIntervalHours: 6,
+      backupKeep: 14,
+      backupFolder: '',
       footerNote: 'Medicines once sold are not returnable without a valid bill.',
     },
     products: [],

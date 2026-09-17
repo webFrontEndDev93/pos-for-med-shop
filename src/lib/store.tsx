@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import { api, ApiError } from './api';
+import { api, ApiError, setUnauthenticatedHandler } from './api';
 import { setCurrencySymbol } from './format';
 import type { Alerts, Batch, Bootstrap, Customer, Product, Sale, Settings } from './types';
 
@@ -15,9 +15,15 @@ export interface Toast {
   message?: string;
 }
 
+export type LockState = 'checking' | 'setup' | 'login' | 'open';
+
 interface Store {
   ready: boolean;
   loadError: string | null;
+  lock: LockState;
+  minPasscodeLength: number;
+  unlock: () => void;
+  signOut: () => Promise<void>;
   settings: Settings;
   products: Product[];
   batches: Batch[];
@@ -49,6 +55,8 @@ const EMPTY_ALERTS: Alerts = { lowStock: [], expiringSoon: [], expired: [] };
 export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lock, setLock] = useState<LockState>('checking');
+  const [minPasscodeLength, setMinPasscodeLength] = useState(4);
   const [settings, setSettings] = useState<Settings>({} as Settings);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -105,20 +113,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [applyBootstrap]);
 
-  useEffect(() => {
-    let cancelled = false;
-    api.bootstrap()
-      .then((data) => {
-        if (cancelled) return;
-        applyBootstrap(data);
-        setLoadError(null);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error instanceof Error ? error.message : 'Could not load shop data.');
-      })
-      .finally(() => !cancelled && setReady(true));
-    return () => { cancelled = true; };
+  const loadShop = useCallback(async () => {
+    try {
+      applyBootstrap(await api.bootstrap());
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not load shop data.');
+    }
   }, [applyBootstrap]);
+
+  // Ask who we are before asking for data: an unlocked till loads straight
+  // through, a fresh one goes to passcode setup.
+  const checkLock = useCallback(async () => {
+    try {
+      const status = await api.authStatus();
+      setMinPasscodeLength(status.minLength);
+      if (!status.required || status.authenticated) {
+        setLock('open');
+        await loadShop();
+      } else {
+        setLock(status.configured ? 'login' : 'setup');
+      }
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Could not reach the MediPOS server.');
+      setLock('open');
+    } finally {
+      setReady(true);
+    }
+  }, [loadShop]);
+
+  useEffect(() => { void checkLock(); }, [checkLock]);
+
+  // Any 401 from anywhere drops the whole till back to the lock screen.
+  useEffect(() => {
+    setUnauthenticatedHandler(() => setLock('login'));
+    return () => setUnauthenticatedHandler(null);
+  }, []);
+
+  const unlock = useCallback(() => {
+    setLock('open');
+    void loadShop();
+  }, [loadShop]);
+
+  const signOut = useCallback(async () => {
+    await api.authLogout().catch(() => undefined);
+    setLock('login');
+  }, []);
 
   // Stock and credit move on every sale, so refresh the derived alert lists.
   const refreshAlerts = useCallback(() => {
@@ -149,13 +189,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [settings.currencySymbol]);
 
   const value = useMemo<Store>(() => ({
-    ready, loadError, settings, products, batches, customers, recentSales, alerts,
+    ready, loadError, lock, minPasscodeLength, unlock, signOut,
+    settings, products, batches, customers, recentSales, alerts,
     theme,
     toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
     toasts, notify, dismissToast, reportError,
     reload, setProducts, setBatches, setCustomers, setSettings, registerSale,
   }), [
-    ready, loadError, settings, products, batches, customers, recentSales, alerts,
+    ready, loadError, lock, minPasscodeLength, unlock, signOut,
+    settings, products, batches, customers, recentSales, alerts,
     theme, toasts, notify, dismissToast, reportError, reload, registerSale,
   ]);
 

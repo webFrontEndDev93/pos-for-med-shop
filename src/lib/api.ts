@@ -12,11 +12,18 @@ export class ApiError extends Error {
   }
 }
 
+/** Called whenever the server says the session is gone, so the UI can re-lock. */
+let onUnauthenticated: (() => void) | null = null;
+export const setUnauthenticatedHandler = (fn: (() => void) | null) => {
+  onUnauthenticated = fn;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
       ...init,
+      credentials: 'same-origin',
       headers: init?.body ? { 'content-type': 'application/json' } : undefined,
     });
   } catch {
@@ -26,6 +33,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
+    // A dropped session anywhere in the app sends the whole till back to the lock screen.
+    if (response.status === 401 && !path.startsWith('/auth/')) onUnauthenticated?.();
     throw new ApiError(response.status, data?.error ?? `Request failed (${response.status}).`);
   }
   return data as T;
@@ -49,7 +58,32 @@ export interface CheckoutPayload {
   note: string;
 }
 
+export interface AuthStatus {
+  required: boolean;
+  configured: boolean;
+  authenticated: boolean;
+  minLength: number;
+  lockedForSeconds: number;
+}
+
+export interface BackupListing {
+  folder: string;
+  writable: boolean;
+  error?: string;
+  files: { name: string; size: number; at: string }[];
+  last: { ok: boolean; at: string; file?: string; error?: string; reason: string } | null;
+}
+
 export const api = {
+  authStatus: () => request<AuthStatus>('/auth/status'),
+  authSetup: (passcode: string) => post<{ ok: true }>('/auth/setup', { passcode }),
+  authLogin: (passcode: string) => post<{ ok: true }>('/auth/login', { passcode }),
+  authLogout: () => post<{ ok: true }>('/auth/logout'),
+  authChange: (current: string, next: string) => post<{ ok: true }>('/auth/change', { current, next }),
+
+  backups: () => request<BackupListing>('/backups'),
+  runBackup: () => post<{ ok: boolean; file?: string; error?: string }>('/backup'),
+
   bootstrap: () => request<Bootstrap>('/bootstrap'),
   alerts: () => request<Alerts>('/alerts'),
 

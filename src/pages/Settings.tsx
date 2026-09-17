@@ -1,16 +1,16 @@
-import { useRef, useState } from 'react';
-import { api } from '../lib/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { api, ApiError, type BackupListing } from '../lib/api';
 import { useStore } from '../lib/store';
 import { moneyShort } from '../lib/format';
 import type { Settings } from '../lib/types';
 import { Icon } from '../components/Icon';
-import { Button, ConfirmDialog, Field, Stat, Switch } from '../components/ui';
+import { Badge, Button, ConfirmDialog, Field, Modal, Stat, Switch } from '../components/ui';
 import '../styles/pages.css';
 
 export function SettingsPage() {
   const {
     settings, products, batches, customers, recentSales,
-    setSettings, notify, reportError, reload, theme, toggleTheme,
+    setSettings, notify, reportError, reload, theme, toggleTheme, signOut,
   } = useStore();
 
   const [draft, setDraft] = useState<Settings>(settings);
@@ -18,6 +18,27 @@ export function SettingsPage() {
   const [restoring, setRestoring] = useState<unknown | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [backups, setBackups] = useState<BackupListing | null>(null);
+  const [backingUp, setBackingUp] = useState(false);
+  const [changingPasscode, setChangingPasscode] = useState(false);
+
+  const loadBackups = useCallback(() => {
+    api.backups().then(setBackups).catch(() => setBackups(null));
+  }, []);
+  useEffect(loadBackups, [loadBackups]);
+
+  const backupNow = async () => {
+    setBackingUp(true);
+    try {
+      const result = await api.runBackup();
+      notify('success', 'Backup written', result.file);
+      loadBackups();
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setBackingUp(false);
+    }
+  };
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) =>
@@ -30,6 +51,7 @@ export function SettingsPage() {
       setSettings(updated);
       setDraft(updated);
       notify('success', 'Settings saved', 'New bills will use these details.');
+      loadBackups();
     } catch (error) {
       reportError(error);
     } finally {
@@ -337,6 +359,121 @@ export function SettingsPage() {
         </div>
 
         <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Automatic backups</div>
+              <div className="cell-sub">
+                The shop's whole record is one file on this computer. Point this at a USB stick
+                or a synced folder so a copy leaves the building.
+              </div>
+            </div>
+            <Button size="sm" icon="download" onClick={backupNow} disabled={backingUp}>
+              {backingUp ? 'Backing up…' : 'Back up now'}
+            </Button>
+          </div>
+          <div className="card-body">
+            <div className="setting-row" style={{ paddingTop: 0 }}>
+              <div>
+                <div className="setting-name">Back up automatically</div>
+                <div className="setting-desc">Runs when MediPOS starts, then on the schedule below.</div>
+              </div>
+              <Switch
+                checked={draft.backupEnabled !== false}
+                onChange={(next) => set('backupEnabled', next)}
+                label=""
+              />
+            </div>
+
+            <div className="form-grid" style={{ marginTop: 'var(--space-4)' }}>
+              <Field label="Every (hours)" hint="Between 1 and 168.">
+                <input
+                  className="input input--num" type="number" min={1} max={168}
+                  value={draft.backupIntervalHours ?? 6}
+                  onChange={(e) => set('backupIntervalHours', Number(e.target.value))}
+                />
+              </Field>
+              <Field label="Copies to keep" hint="Older ones are deleted automatically.">
+                <input
+                  className="input input--num" type="number" min={1} max={365}
+                  value={draft.backupKeep ?? 14}
+                  onChange={(e) => set('backupKeep', Number(e.target.value))}
+                />
+              </Field>
+              <div className="span-2">
+                <Field
+                  label="Backup folder"
+                  hint={`Leave blank to use ${backups?.folder ?? 'the default folder next to the data file'}.`}
+                >
+                  <input
+                    className="input mono"
+                    placeholder="/media/usb/medipos  or  D:\\medipos-backups"
+                    value={draft.backupFolder ?? ''}
+                    onChange={(e) => set('backupFolder', e.target.value)}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-5)' }}>
+              <div className="row-between" style={{ marginBottom: 'var(--space-2)' }}>
+                <span className="tender-heading"><span>Recent backups</span></span>
+                {backups && !backups.writable && <Badge tone="danger">folder unreachable</Badge>}
+              </div>
+
+              {!backups ? (
+                <div className="skeleton" style={{ height: '3rem' }} />
+              ) : !backups.writable ? (
+                <p className="error-text">
+                  Cannot write to {backups.folder} — {backups.error}. Check the drive is plugged in.
+                </p>
+              ) : backups.files.length === 0 ? (
+                <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
+                  No backups yet. One is written each time MediPOS starts.
+                </p>
+              ) : (
+                <div style={{ maxHeight: '14rem', overflowY: 'auto' }}>
+                  {backups.files.map((file) => (
+                    <div className="ledger-row" key={file.name} style={{ padding: 'var(--space-2) 0' }}>
+                      <span className="grow mono truncate" style={{ fontSize: 'var(--text-xs)' }}>{file.name}</span>
+                      <span className="muted num" style={{ fontSize: 'var(--text-xs)' }}>
+                        {(file.size / 1024).toFixed(0)} KB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">Security</div>
+              <div className="cell-sub">Who can open this till.</div>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="setting-row" style={{ paddingTop: 0 }}>
+              <div>
+                <div className="setting-name">Shop passcode</div>
+                <div className="setting-desc">
+                  Required each time MediPOS starts. Changing it signs out every other device.
+                </div>
+              </div>
+              <Button icon="shield" onClick={() => setChangingPasscode(true)}>Change passcode</Button>
+            </div>
+            <div className="setting-row">
+              <div>
+                <div className="setting-name">Sign out</div>
+                <div className="setting-desc">Locks the counter without stopping MediPOS.</div>
+              </div>
+              <Button icon="close" onClick={() => void signOut()}>Sign out</Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
           <div className="card-head"><div className="card-title">Keyboard shortcuts</div></div>
           <div className="card-body">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(16rem, 1fr))', gap: 'var(--space-3)' }}>
@@ -363,6 +500,8 @@ export function SettingsPage() {
         </p>
       </div>
 
+      {changingPasscode && <PasscodeDialog onClose={() => setChangingPasscode(false)} />}
+
       {restoring !== null && (
         <ConfirmDialog
           title="Replace all shop data?"
@@ -374,5 +513,64 @@ export function SettingsPage() {
         />
       )}
     </div>
+  );
+}
+
+
+/* ------------------------------------------------------------ passcode */
+
+function PasscodeDialog({ onClose }: { onClose: () => void }) {
+  const { notify } = useStore();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const mismatch = confirm.length > 0 && next !== confirm;
+  const invalid = next.length < 4 || next !== confirm || !current;
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.authChange(current, next);
+      notify('success', 'Passcode changed', 'Other devices have been signed out.');
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not change the passcode.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Change passcode"
+      subtitle="Everyone using the counter will need the new one."
+      width="26rem"
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={submit} disabled={invalid || saving}>
+            {saving ? 'Saving…' : 'Change passcode'}
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        <Field label="Current passcode">
+          <input className="input" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </Field>
+        <Field label="New passcode" hint="At least 4 characters.">
+          <input className="input" type="password" value={next} onChange={(e) => setNext(e.target.value)} />
+        </Field>
+        <Field label="Confirm new passcode" error={mismatch ? 'Those two do not match.' : undefined}>
+          <input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </Field>
+        {error && <p className="error-text">{error}</p>}
+      </div>
+    </Modal>
   );
 }

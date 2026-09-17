@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Lock } from './components/Lock';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { Icon } from './components/Icon';
@@ -20,7 +21,7 @@ const SHORTCUTS: Record<string, Route> = {
 };
 
 export default function App() {
-  const { ready, loadError, reload, settings } = useStore();
+  const { ready, loadError, reload, settings, lock, minPasscodeLength, unlock } = useStore();
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('medipos.sidebar') === 'collapsed',
@@ -71,6 +72,10 @@ export default function App() {
         <p style={{ fontSize: 'var(--text-sm)' }}>Opening the shop…</p>
       </div>
     );
+  }
+
+  if (lock === 'setup' || lock === 'login') {
+    return <Lock mode={lock} minLength={minPasscodeLength} onUnlocked={unlock} />;
   }
 
   if (loadError) {

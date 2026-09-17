@@ -32,7 +32,18 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
   transfer), and Udhaar. Change the symbol from Settings if you need another
   currency — a word-like symbol gets its spacing automatically.
 
-## Running it
+## Putting it on a shop computer
+
+**[install/README.md](install/README.md) is the guide to read** if you are setting this
+up on a real till: build, copy, start at boot, kiosk window, backups and the receipt
+printer, step by step.
+
+The short version: `npm run build && npm run package` produces a **~450 KB**
+`medipos-shop/` folder. Copy it to the shop machine, install Node 20+, run `start.sh`
+or `start.bat`. The server imports only Node built-ins, so **the till needs no
+`node_modules` and no npm** — npm is a build tool here, not a runtime one.
+
+## Running it for development
 
 Requires Node 20 or newer. Nothing else — no database, no Docker, no build toolchain
 beyond npm.
@@ -64,6 +75,7 @@ Open <http://localhost:5173>. Vite proxies `/api` through to the Node server.
 | `npm start` | Serve the built app and the API from one process |
 | `npm run seed` | Overwrite the database with fresh demo data |
 | `npm run typecheck` | TypeScript only, no build |
+| `npm run package` | Build the ~450 KB folder that goes on the shop computer |
 
 Set `PORT` to move the server, and `POS_DATA_DIR` to keep the data somewhere else
 (a synced folder, for example).
@@ -151,19 +163,51 @@ production bundle is about 98 kB gzipped.
 validated for CVD separation against both the light and dark surfaces, and series are
 distinguished by line style and written labels as well as hue.
 
+## Locking the till
+
+![Passcode setup on first run](docs/screens/passcode.png)
+
+MediPOS asks for a **passcode** the first time it starts, and on every start after
+that. It is one shared shop passcode, not per-staff accounts.
+
+- Stored as an scrypt hash in `server/data/auth.json` — deliberately **not** in
+  `db.json`, so a backup you email to yourself never carries the credential.
+- Five wrong tries triggers a lockout that doubles each time. A correct passcode is
+  refused while locked out, so the lockout cannot be walked around.
+- Sessions live in memory and last a shift. Restarting MediPOS signs the counter out,
+  which is the safer default for a shared machine.
+- Changing the passcode in Settings signs out every other device.
+- Forgot it? Delete `server/data/auth.json` and restart to set a new one.
+- `POS_AUTH=off` disables the gate entirely, for development or a single-owner shop
+  that locks the laptop instead.
+
+The server listens on the whole network, so a phone on the shop Wi-Fi can reach it —
+the passcode is the only thing in the way. Use `HOST=127.0.0.1` to bind to the machine
+alone.
+
 ## Backups
 
-The shop is one JSON file, so a backup is a file copy. **Settings → Data → Download a
-backup** saves it through the browser; restoring replaces everything and keeps a copy
-of the previous state in `server/data/backups/` first.
+![Automatic backups in Settings](docs/screens/backups.png)
 
-Back up daily to somewhere other than the shop machine. A till that loses its stock and
-udhaar records has lost the business's memory.
+**Settings → Automatic backups.** A dated copy is written when MediPOS starts and then
+on a schedule you set, with old copies pruned to a limit.
+
+**Point the backup folder at a USB stick or a synced folder.** A backup that only
+exists on the till is not a backup: the realistic disaster is the laptop being stolen,
+dropped or dying, and taking both copies with it.
+
+A backup drive that is missing, full or stalled never stops the shop selling. Every
+backup is time-boxed and single-flight, so a half-connected USB stick or an unreachable
+network share fails with a message in Settings after 20 seconds rather than hanging the
+till. Settings → Data also has a one-click download, and restoring keeps a copy of the
+previous state first.
 
 ## Limits worth knowing
 
-- Single shop, single terminal. Several browsers can point at one server on the LAN,
-  but there is no login, no per-user audit trail and no locking between tills.
+- One shared passcode, not staff accounts: there is no per-user audit trail, and
+  anyone who can open the till can void bills and read takings.
+- Several browsers can point at one server on the LAN, but there is no locking between
+  tills — two people billing the same last packet at the same moment is not handled.
 - No purchase orders, supplier ledger, or sales-tax return filing.
 - Udhaar is tracked per customer as a running balance, not as an aged-debtor report.
 - Sales tax is a single rate per product, chosen from a list you configure. There is

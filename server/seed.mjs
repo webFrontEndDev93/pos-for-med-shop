@@ -291,13 +291,18 @@ export function ensureSeed() {
   }
   const seeded = buildSeed();
   resetCache();
-  writeDb((db) => {
+  // Returned, not fired and forgotten: the caller awaits this so a data folder
+  // it cannot write to becomes a clear startup message rather than an
+  // unhandled rejection.
+  const written = writeDb((db) => {
     Object.assign(db, seeded);
+  }).then(() => {
+    console.log(
+      `[seed] demo shop ready — ${seeded.products.length} medicines, ${seeded.batches.length} batches, ${seeded.sales.length} bills, ${seeded.payments.length} credit settlements.`,
+    );
+    return true;
   });
-  console.log(
-    `[seed] demo shop ready — ${seeded.products.length} medicines, ${seeded.batches.length} batches, ${seeded.sales.length} bills, ${seeded.payments.length} credit settlements.`,
-  );
-  return true;
+  return written;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

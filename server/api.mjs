@@ -1,4 +1,5 @@
-import { readDb, writeDb, replaceDb, backup, id, DEFAULT_TAX_RATES } from './db.mjs';
+import { readDb, writeDb, replaceDb, id, DEFAULT_TAX_RATES } from './db.mjs';
+import { runBackup, listBackups } from './backup.mjs';
 import {
   round2,
   todayISO,
@@ -522,12 +523,21 @@ export const routes = [
       next.nextInvoiceSeq = Math.max(1, Math.round(num(next.nextInvoiceSeq, 1)));
       next.defaultTaxRate = Math.min(Math.max(num(next.defaultTaxRate, 0), 0), 100);
       next.taxRates = normaliseTaxRates(next.taxRates);
+      next.backupEnabled = next.backupEnabled !== false;
+      next.backupIntervalHours = Math.min(Math.max(Math.round(num(next.backupIntervalHours, 6)), 1), 168);
+      next.backupKeep = Math.min(Math.max(Math.round(num(next.backupKeep, 14)), 1), 365);
+      next.backupFolder = str(next.backupFolder);
       db.settings = next;
       return db.settings;
     })],
 
   ['GET', '/api/backup', () => readDb()],
-  ['POST', '/api/backup', async () => ({ file: await backup('manual') })],
+  ['POST', '/api/backup', async () => {
+    const result = await runBackup('manual');
+    if (!result.ok) throw new HttpError(500, `Could not write the backup: ${result.error}`);
+    return result;
+  }],
+  ['GET', '/api/backups', () => listBackups()],
   ['POST', '/api/restore', async (_p, body) => {
     if (!body || !Array.isArray(body.products)) throw bad('That file does not look like a MediPOS backup.');
     await replaceDb(body);

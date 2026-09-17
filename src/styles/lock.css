@@ -1,0 +1,49 @@
+.lock {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-5);
+  background:
+    radial-gradient(circle at 20% 0%, hsl(var(--brand-h) 50% 50% / 0.10), transparent 45%),
+    radial-gradient(circle at 85% 100%, hsl(var(--brand-h) 50% 50% / 0.08), transparent 45%),
+    var(--bg);
+}
+
+.lock-card {
+  width: min(24rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  animation: pop var(--normal);
+}
+
+.lock-mark {
+  width: 3rem; height: 3rem;
+  display: grid; place-items: center;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, var(--brand), hsl(var(--brand-h) 70% 38%));
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.lock-title { font-size: var(--text-lg); font-weight: 680; letter-spacing: -0.025em; }
+.lock-sub { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.55; margin-top: calc(var(--space-3) * -1); }
+
+.lock-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.lock-field .input { height: 2.75rem; font-size: var(--text-md); letter-spacing: 0.15em; }
+
+.lock-error {
+  font-size: var(--text-sm); font-weight: 550; color: var(--danger);
+  background: var(--danger-soft); border: 1px solid var(--danger-border);
+  border-radius: var(--radius); padding: var(--space-2) var(--space-3);
+}
+
+.lock-foot {
+  font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5;
+  border-top: 1px solid var(--border); padding-top: var(--space-4);
+}

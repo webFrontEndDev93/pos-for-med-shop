@@ -62,17 +62,32 @@ interface ModalProps {
 export function Modal({ title, subtitle, width = '34rem', onClose, footer, children }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
 
+  // Callers routinely pass an inline arrow for onClose, so its identity changes
+  // on every render of the parent. Read it through a ref and keep both effects
+  // mount-only: depending on it re-ran the autofocus below on every keystroke,
+  // which yanked the caret back to the first field mid-typing.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose();
+        closeRef.current();
       }
       // Keep tabbing inside the dialog while it is open.
       if (event.key === 'Tab' && panel.current) {
-        const focusable = panel.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
+        // Disabled and hidden controls never receive focus, so including them
+        // meant the "are we on the last one?" check could never match and the
+        // trap silently let focus escape — a dialog whose Save button starts
+        // disabled leaked on the very first pass.
+        const focusable = [
+          ...panel.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        ].filter((el) => !el.hasAttribute('disabled') && el.getClientRects().length > 0);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -86,7 +101,12 @@ export function Modal({ title, subtitle, width = '34rem', onClose, footer, child
       }
     };
     document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, []);
 
+  // Focus the first field once, when the dialog opens — and hand focus back to
+  // whatever opened it on the way out.
+  useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const timer = window.setTimeout(() => {
       const target = panel.current?.querySelector<HTMLElement>(
@@ -96,11 +116,10 @@ export function Modal({ title, subtitle, width = '34rem', onClose, footer, child
     }, 40);
 
     return () => {
-      document.removeEventListener('keydown', onKey, true);
       window.clearTimeout(timer);
       previous?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

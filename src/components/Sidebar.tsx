@@ -8,14 +8,16 @@ interface NavEntry {
   label: string;
   icon: IconName;
   shortcut: string;
+  /** Screens the counter passcode cannot open without an owner override. */
+  adminOnly?: boolean;
 }
 
 const NAV: NavEntry[] = [
   { route: 'billing', label: 'Billing', icon: 'billing', shortcut: 'F1' },
   { route: 'inventory', label: 'Inventory', icon: 'inventory', shortcut: 'F2' },
   { route: 'customers', label: 'Customers', icon: 'customers', shortcut: 'F3' },
-  { route: 'reports', label: 'Reports', icon: 'reports', shortcut: 'F4' },
-  { route: 'settings', label: 'Settings', icon: 'settings', shortcut: 'F5' },
+  { route: 'reports', label: 'Reports', icon: 'reports', shortcut: 'F4', adminOnly: true },
+  { route: 'settings', label: 'Settings', icon: 'settings', shortcut: 'F5', adminOnly: true },
 ];
 
 interface SidebarProps {
@@ -26,7 +28,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: SidebarProps) {
-  const { settings, alerts, theme, toggleTheme } = useStore();
+  const { settings, alerts, theme, toggleTheme, isAdmin, role, elevatedFor, dropElevation } = useStore();
   const stockWarnings = alerts.lowStock.length + alerts.expired.length;
 
   return (
@@ -48,12 +50,18 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: Side
             className="nav-item"
             aria-current={route === entry.route ? 'page' : undefined}
             onClick={() => onNavigate(entry.route)}
-            title={collapsed ? `${entry.label} (${entry.shortcut})` : undefined}
+            title={
+              entry.adminOnly && !isAdmin
+                ? `${entry.label} — needs the owner passcode`
+                : collapsed ? `${entry.label} (${entry.shortcut})` : undefined
+            }
           >
             <Icon name={entry.icon} size={17} />
             <span>{entry.label}</span>
             {entry.route === 'inventory' && stockWarnings > 0 ? (
               <span className="nav-badge">{stockWarnings > 99 ? '99+' : stockWarnings}</span>
+            ) : entry.adminOnly && !isAdmin ? (
+              <Icon name="shield" size={13} style={{ marginLeft: 'auto', opacity: 0.55 }} />
             ) : (
               <kbd className="kbd">{entry.shortcut}</kbd>
             )}
@@ -62,6 +70,24 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: Side
       </nav>
 
       <div className="sidebar-foot">
+        {role === 'staff' && (
+          elevatedFor > 0 ? (
+            <button
+              type="button"
+              className="role-chip role-chip--elevated"
+              onClick={() => void dropElevation()}
+              title="End owner access now"
+            >
+              <Icon name="shield" size={13} />
+              {!collapsed && <span className="grow">Owner access · {elevatedFor}s</span>}
+            </button>
+          ) : (
+            <span className="role-chip" title="Signed in with the counter passcode">
+              <Icon name="user" size={13} />
+              {!collapsed && <span className="grow">Counter</span>}
+            </span>
+          )
+        )}
         <Button
           variant="ghost"
           size="sm"

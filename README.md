@@ -163,27 +163,60 @@ production bundle is about 98 kB gzipped.
 validated for CVD separation against both the light and dark surfaces, and series are
 distinguished by line style and written labels as well as hue.
 
-## Locking the till
+## Two passcodes: owner and counter
 
-![Passcode setup on first run](docs/screens/passcode.png)
+MediPOS asks for a passcode the first time it starts, and on every start after that.
+You set **two**:
 
-MediPOS asks for a **passcode** the first time it starts, and on every start after
-that. It is one shared shop passcode, not per-staff accounts.
+| | Owner | Counter |
+| --- | --- | --- |
+| Bill, search stock, take udhaar payments | yes | yes |
+| Add and edit customers | yes | yes |
+| **Cancel a bill** | yes | **no** |
+| See takings, profit and best-sellers | yes | no |
+| Add stock, change a price or a tax rate | yes | no |
+| Delete a medicine, batch or customer | yes | no |
+| Open Settings, backups, change passcodes | yes | no |
 
-- Stored as an scrypt hash in `server/data/auth.json` — deliberately **not** in
-  `db.json`, so a backup you email to yourself never carries the credential.
+![Setting both passcodes on first run](docs/screens/passcode.png)
+
+The counter passcode is optional — leave it blank to run the shop on one code, and add
+it later in Settings.
+
+### Manager override
+
+Staff are not left at a dead end. When the counter hits something owner-only, MediPOS
+asks for the **owner passcode** right there; the owner walks over, types it, and the
+action goes through. Nobody signs out mid-queue.
+
+![Asking for the owner passcode](docs/screens/override.png)
+
+The override lasts five minutes and is visible in the sidebar with a countdown, which
+doubles as a button to end it early. It lifts *that session* temporarily — it does not
+change who is signed in.
+
+### How it is enforced
+
+The gate is on the **server**, route by route. The UI hides what staff cannot do, but
+that is only a courtesy: a staff session that replays a request or types a URL gets a
+`403`, because the server checks the session's role on every admin route.
+
+- Passcodes are scrypt hashes in `server/data/auth.json` — deliberately **not** in
+  `db.json`, so a backup you email yourself never carries them.
 - Five wrong tries triggers a lockout that doubles each time. A correct passcode is
   refused while locked out, so the lockout cannot be walked around.
-- Sessions live in memory and last a shift. Restarting MediPOS signs the counter out,
-  which is the safer default for a shared machine.
-- Changing the passcode in Settings signs out every other device.
-- Forgot it? Delete `server/data/auth.json` and restart to set a new one.
-- `POS_AUTH=off` disables the gate entirely, for development or a single-owner shop
-  that locks the laptop instead.
+- The two passcodes must differ, or the roles would silently collapse into one.
+- Only the owner can change either passcode — otherwise staff could promote themselves.
+- Sessions live in memory and last a shift. Restarting MediPOS signs the counter out.
+- Forgot the owner passcode? Delete `server/data/auth.json` and restart to set new ones.
+- `POS_AUTH=off` disables the gate entirely, for development or a one-person shop.
+
+A till set up before roles existed keeps working: its single passcode becomes the owner
+one, and the counter carries on until you add a staff code.
 
 The server listens on the whole network, so a phone on the shop Wi-Fi can reach it —
-the passcode is the only thing in the way. Use `HOST=127.0.0.1` to bind to the machine
-alone.
+the passcodes are the only thing in the way. Use `HOST=127.0.0.1` to bind to the
+machine alone.
 
 ## Backups
 
@@ -204,8 +237,8 @@ previous state first.
 
 ## Limits worth knowing
 
-- One shared passcode, not staff accounts: there is no per-user audit trail, and
-  anyone who can open the till can void bills and read takings.
+- Two roles, not individual staff accounts: bills do not record *which* person rang
+  them up, so there is no per-person audit trail.
 - Several browsers can point at one server on the LAN, but there is no locking between
   tills — two people billing the same last packet at the same moment is not handled.
 - No purchase orders, supplier ledger, or sales-tax return filing.

@@ -6,12 +6,14 @@ import type { Customer, Payment, Sale } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Modal, Stat } from '../components/ui';
 import { Receipt } from '../components/Receipt';
+import { useAdminAction } from '../components/AdminGate';
 import '../styles/pages.css';
 
 type Lens = 'all' | 'credit';
 
 export function Customers() {
-  const { customers, settings, setCustomers, notify, reportError } = useStore();
+  const { customers, settings, setCustomers, notify, reportError, isAdmin } = useStore();
+  const { guard, gate } = useAdminAction();
   const [query, setQuery] = useState('');
   const [lens, setLens] = useState<Lens>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -177,8 +179,8 @@ export function Customers() {
                             aria-label={`Edit ${customer.name}`}
                           />
                           <Button
-                            variant="ghost" size="sm" iconOnly icon="trash"
-                            onClick={(e) => { e.stopPropagation(); setDeleting(customer); }}
+                            variant="ghost" size="sm" iconOnly icon={isAdmin ? 'trash' : 'shield'}
+                            onClick={(e) => { e.stopPropagation(); guard('remove a customer', () => setDeleting(customer))(); }}
                             aria-label={`Delete ${customer.name}`}
                           />
                         </div>
@@ -316,6 +318,8 @@ export function Customers() {
           )}
         </div>
       </div>
+
+      {gate}
 
       {(adding || editing) && (
         <CustomerForm customer={editing} onClose={() => { setAdding(false); setEditing(null); }} />

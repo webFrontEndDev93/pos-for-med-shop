@@ -17,6 +17,7 @@ export function Lock({
 }) {
   const [passcode, setPasscode] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [staffPasscode, setStaffPasscode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lockedFor, setLockedFor] = useState(0);
@@ -34,7 +35,10 @@ export function Lock({
   const setup = mode === 'setup';
   const tooShort = passcode.length < minLength;
   const mismatch = setup && confirm.length > 0 && passcode !== confirm;
-  const blocked = busy || lockedFor > 0 || tooShort || (setup && passcode !== confirm);
+  const staffTooShort = setup && staffPasscode.length > 0 && staffPasscode.length < minLength;
+  const staffSame = setup && staffPasscode.length > 0 && staffPasscode === passcode;
+  const blocked =
+    busy || lockedFor > 0 || tooShort || staffTooShort || staffSame || (setup && passcode !== confirm);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -42,7 +46,7 @@ export function Lock({
     setBusy(true);
     setError(null);
     try {
-      if (setup) await api.authSetup(passcode);
+      if (setup) await api.authSetup(passcode, staffPasscode);
       else await api.authLogin(passcode);
       onUnlocked();
     } catch (err) {
@@ -66,12 +70,12 @@ export function Lock({
         <h1 className="lock-title">{setup ? 'Set a passcode' : 'MediPOS'}</h1>
         <p className="lock-sub">
           {setup
-            ? `Choose a passcode for this till — at least ${minLength} characters. Everyone who uses the counter will need it.`
-            : 'Enter the shop passcode to open the counter.'}
+            ? `Choose an owner passcode — at least ${minLength} characters. It unlocks everything, including cancelling bills and seeing takings.`
+            : 'Enter your passcode to open the counter.'}
         </p>
 
         <label className="lock-field">
-          <span className="label">{setup ? 'New passcode' : 'Passcode'}</span>
+          <span className="label">{setup ? 'Owner passcode' : 'Passcode'}</span>
           <input
             ref={input}
             className="input"
@@ -85,21 +89,44 @@ export function Lock({
         </label>
 
         {setup && (
-          <label className="lock-field">
-            <span className="label">Confirm passcode</span>
-            <input
-              className="input"
-              type="password"
-              value={confirm}
-              autoComplete="new-password"
-              onChange={(e) => setConfirm(e.target.value)}
-              disabled={busy}
-              aria-label="Confirm passcode"
-            />
-          </label>
+          <>
+            <label className="lock-field">
+              <span className="label">Confirm owner passcode</span>
+              <input
+                className="input"
+                type="password"
+                value={confirm}
+                autoComplete="new-password"
+                onChange={(e) => setConfirm(e.target.value)}
+                disabled={busy}
+                aria-label="Confirm passcode"
+              />
+            </label>
+            <label className="lock-field">
+              <span className="label">Counter passcode — optional</span>
+              <input
+                className="input"
+                type="password"
+                value={staffPasscode}
+                autoComplete="new-password"
+                onChange={(e) => setStaffPasscode(e.target.value)}
+                disabled={busy}
+                aria-label="Counter passcode"
+              />
+              <span className="hint">
+                Give this one to staff. They can bill and look up stock, but cannot cancel
+                bills, see takings, change prices or open Settings. Leave blank to run the
+                shop on a single passcode — you can add it later in Settings.
+              </span>
+            </label>
+          </>
         )}
 
         {mismatch && <p className="lock-error">Those two do not match.</p>}
+        {staffTooShort && (
+          <p className="lock-error">The counter passcode needs at least {minLength} characters too.</p>
+        )}
+        {staffSame && <p className="lock-error">The counter passcode must be different from the owner one.</p>}
         {error && <p className="lock-error">{error}</p>}
         {lockedFor > 0 && (
           <p className="lock-error">Locked for {lockedFor} more second{lockedFor === 1 ? '' : 's'}.</p>
@@ -111,7 +138,7 @@ export function Lock({
 
         <p className="lock-foot">
           {setup
-            ? 'Write it somewhere safe. There is no way to recover it — you would have to delete server/data/auth.json and set a new one.'
+            ? 'Write the owner passcode somewhere safe. There is no way to recover it — you would have to delete server/data/auth.json and start again.'
             : 'Forgot it? Delete server/data/auth.json on this computer and restart MediPOS to set a new one.'}
         </p>
       </form>

@@ -496,3 +496,18 @@ table.data th.right { text-align: right; }
   .app[data-collapsed='false'] .sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); box-shadow: var(--shadow-lg); }
   .toast-stack { left: var(--space-4); right: var(--space-4); max-width: none; }
 }
+
+/* Who is signed in, shown at the foot of the sidebar for counter sessions. */
+.role-chip {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-muted);
+  font-size: var(--text-xs); font-weight: 600; width: 100%;
+  white-space: nowrap; overflow: hidden;
+}
+.role-chip--elevated {
+  background: var(--warning-soft); border-color: var(--warning-border);
+  color: var(--warning); cursor: pointer;
+}
+.role-chip--elevated:hover { filter: brightness(0.97); }

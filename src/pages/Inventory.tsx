@@ -5,6 +5,7 @@ import { daysUntil, expiryLabel, formatDate, fuzzyScore, money, moneyShort, toda
 import type { Batch, Product } from '../lib/types';
 import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Stat } from '../components/ui';
+import { useAdminAction } from '../components/AdminGate';
 import { ProductForm } from '../components/ProductForm';
 import { BatchForm } from '../components/BatchForm';
 import '../styles/pages.css';
@@ -30,7 +31,9 @@ interface Row {
 }
 
 export function Inventory() {
-  const { products, batches, settings, alerts, setProducts, setBatches, notify, reportError } = useStore();
+  const { products, batches, settings, alerts, setProducts, setBatches, notify, reportError, isAdmin } = useStore();
+  // Prices and the catalogue are owner territory; staff are offered the override.
+  const { guard, gate } = useAdminAction();
   const today = todayISO();
 
   const [query, setQuery] = useState('');
@@ -144,7 +147,13 @@ export function Inventory() {
           </p>
         </div>
         <div className="row">
-          <Button icon="plus" variant="primary" onClick={() => setAddingProduct(true)}>Add medicine</Button>
+          <Button
+            icon={isAdmin ? 'plus' : 'shield'}
+            variant="primary"
+            onClick={guard('add a medicine', () => setAddingProduct(true))}
+          >
+            Add medicine
+          </Button>
         </div>
       </div>
 
@@ -364,8 +373,8 @@ export function Inventory() {
                           <div className="row" style={{ justifyContent: 'flex-end', gap: 4 }}>
                             <Button
                               size="sm"
-                              icon="plus"
-                              onClick={() => setBatchTarget({ product: row.product, batch: null })}
+                              icon={isAdmin ? 'plus' : 'shield'}
+                              onClick={guard('receive stock', () => setBatchTarget({ product: row.product, batch: null }))}
                             >
                               Stock
                             </Button>
@@ -374,7 +383,7 @@ export function Inventory() {
                               size="sm"
                               iconOnly
                               icon="edit"
-                              onClick={() => setEditingProduct(row.product)}
+                              onClick={guard('edit a medicine', () => setEditingProduct(row.product))}
                               aria-label={`Edit ${row.product.name}`}
                             />
                             <Button
@@ -382,7 +391,7 @@ export function Inventory() {
                               size="sm"
                               iconOnly
                               icon="trash"
-                              onClick={() => setDeleting({ kind: 'product', id: row.product.id, label: row.product.name })}
+                              onClick={guard('delete a medicine', () => setDeleting({ kind: 'product', id: row.product.id, label: row.product.name }))}
                               aria-label={`Delete ${row.product.name}`}
                             />
                           </div>
@@ -435,7 +444,7 @@ export function Inventory() {
                                                 size="sm"
                                                 iconOnly
                                                 icon="edit"
-                                                onClick={() => setBatchTarget({ product: row.product, batch })}
+                                                onClick={guard('change a price', () => setBatchTarget({ product: row.product, batch }))}
                                                 aria-label={`Edit batch ${batch.batchNo}`}
                                               />
                                               <Button
@@ -443,13 +452,13 @@ export function Inventory() {
                                                 size="sm"
                                                 iconOnly
                                                 icon="trash"
-                                                onClick={() =>
+                                                onClick={guard('delete a batch', () =>
                                                   setDeleting({
                                                     kind: 'batch',
                                                     id: batch.id,
                                                     label: `${row.product.name} · batch ${batch.batchNo}`,
-                                                  })
-                                                }
+                                                  }),
+                                                )}
                                                 aria-label={`Delete batch ${batch.batchNo}`}
                                               />
                                             </div>
@@ -472,6 +481,8 @@ export function Inventory() {
           </div>
         )}
       </div>
+
+      {gate}
 
       {(addingProduct || editingProduct) && (
         <ProductForm

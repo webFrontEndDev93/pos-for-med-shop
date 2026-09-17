@@ -356,7 +356,16 @@ function alerts(db) {
 
 /* -------------------------------------------------------------------- routes */
 
-/** [method, path pattern, handler]. `:param` segments are captured. */
+/**
+ * [method, path pattern, handler, scope?].
+ *
+ * `:param` segments are captured. A scope of 'admin' means the counter passcode
+ * cannot reach it — voiding bills, anything that sets a price or a tax rate,
+ * deleting records, the takings reports, settings and backups. Staff keep what
+ * a till operator needs: billing, looking up stock, and customer records.
+ *
+ * This is the real gate. The UI hides these actions too, but only as a courtesy.
+ */
 export const routes = [
   ['GET', '/api/health', () => ({ ok: true, at: new Date().toISOString() })],
 
@@ -380,14 +389,14 @@ export const routes = [
       const product = { id: id('prd'), createdAt: new Date().toISOString(), ...productPayload(body, db.settings) };
       db.products.push(product);
       return product;
-    })],
+    }), 'admin'],
   ['PUT', '/api/products/:id', (p, body) =>
     writeDb((db) => {
       const product = db.products.find((x) => x.id === p.id);
       if (!product) throw notFound('Product not found.');
       Object.assign(product, productPayload({ ...product, ...body }, db.settings));
       return product;
-    })],
+    }), 'admin'],
   ['DELETE', '/api/products/:id', (p) =>
     writeDb((db) => {
       const index = db.products.findIndex((x) => x.id === p.id);
@@ -398,7 +407,7 @@ export const routes = [
       db.batches = db.batches.filter((b) => b.productId !== p.id);
       const [removed] = db.products.splice(index, 1);
       return removed;
-    })],
+    }), 'admin'],
 
   ['GET', '/api/batches', () => readDb().batches],
   ['POST', '/api/batches', (_p, body) =>
@@ -406,14 +415,14 @@ export const routes = [
       const batch = { id: id('bch'), createdAt: new Date().toISOString(), ...batchPayload(body, db) };
       db.batches.push(batch);
       return batch;
-    })],
+    }), 'admin'],
   ['PUT', '/api/batches/:id', (p, body) =>
     writeDb((db) => {
       const batch = db.batches.find((x) => x.id === p.id);
       if (!batch) throw notFound('Batch not found.');
       Object.assign(batch, batchPayload({ ...batch, ...body }, db));
       return batch;
-    })],
+    }), 'admin'],
   ['DELETE', '/api/batches/:id', (p) =>
     writeDb((db) => {
       const index = db.batches.findIndex((x) => x.id === p.id);
@@ -423,7 +432,7 @@ export const routes = [
       }
       const [removed] = db.batches.splice(index, 1);
       return removed;
-    })],
+    }), 'admin'],
 
   ['GET', '/api/customers', () => readDb().customers],
   ['POST', '/api/customers', (_p, body) =>
@@ -452,7 +461,7 @@ export const routes = [
       }
       const [removed] = db.customers.splice(index, 1);
       return removed;
-    })],
+    }), 'admin'],
   ['GET', '/api/customers/:id/ledger', (p) => {
     const db = readDb();
     const customer = db.customers.find((c) => c.id === p.id);
@@ -480,14 +489,14 @@ export const routes = [
       );
     }
     return sales.slice(0, Number(query.limit) || 200);
-  }],
+  }, 'admin'],
   ['GET', '/api/sales/:id', (p) => {
     const sale = readDb().sales.find((s) => s.id === p.id);
     if (!sale) throw notFound('Sale not found.');
     return sale;
   }],
   ['POST', '/api/sales', (_p, body) => writeDb((db) => createSale(db, body))],
-  ['POST', '/api/sales/:id/void', (p) => writeDb((db) => voidSale(db, p.id))],
+  ['POST', '/api/sales/:id/void', (p) => writeDb((db) => voidSale(db, p.id)), 'admin'],
 
   ['POST', '/api/payments', (_p, body) =>
     writeDb((db) => {
@@ -512,7 +521,7 @@ export const routes = [
       return { payment, customer };
     })],
 
-  ['GET', '/api/reports/summary', (_p, _b, query) => reportSummary(readDb(), query.from, query.to)],
+  ['GET', '/api/reports/summary', (_p, _b, query) => reportSummary(readDb(), query.from, query.to), 'admin'],
 
   ['GET', '/api/settings', () => readDb().settings],
   ['PUT', '/api/settings', (_p, body) =>
@@ -529,18 +538,18 @@ export const routes = [
       next.backupFolder = str(next.backupFolder);
       db.settings = next;
       return db.settings;
-    })],
+    }), 'admin'],
 
-  ['GET', '/api/backup', () => readDb()],
+  ['GET', '/api/backup', () => readDb(), 'admin'],
   ['POST', '/api/backup', async () => {
     const result = await runBackup('manual');
     if (!result.ok) throw new HttpError(500, `Could not write the backup: ${result.error}`);
     return result;
-  }],
-  ['GET', '/api/backups', () => listBackups()],
+  }, 'admin'],
+  ['GET', '/api/backups', () => listBackups(), 'admin'],
   ['POST', '/api/restore', async (_p, body) => {
     if (!body || !Array.isArray(body.products)) throw bad('That file does not look like a MediPOS backup.');
     await replaceDb(body);
     return { ok: true };
-  }],
+  }, 'admin'],
 ];

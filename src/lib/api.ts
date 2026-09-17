@@ -58,10 +58,17 @@ export interface CheckoutPayload {
   note: string;
 }
 
+export type Role = 'admin' | 'staff';
+
 export interface AuthStatus {
   required: boolean;
   configured: boolean;
+  hasStaffPasscode: boolean;
   authenticated: boolean;
+  role: Role | null;
+  isAdmin: boolean;
+  elevatedForSeconds: number;
+  elevationSeconds: number;
   minLength: number;
   lockedForSeconds: number;
 }
@@ -76,10 +83,15 @@ export interface BackupListing {
 
 export const api = {
   authStatus: () => request<AuthStatus>('/auth/status'),
-  authSetup: (passcode: string) => post<{ ok: true }>('/auth/setup', { passcode }),
-  authLogin: (passcode: string) => post<{ ok: true }>('/auth/login', { passcode }),
+  authSetup: (passcode: string, staffPasscode: string) =>
+    post<{ ok: true; role: Role }>('/auth/setup', { passcode, staffPasscode }),
+  authLogin: (passcode: string) => post<{ ok: true; role: Role }>('/auth/login', { passcode }),
   authLogout: () => post<{ ok: true }>('/auth/logout'),
-  authChange: (current: string, next: string) => post<{ ok: true }>('/auth/change', { current, next }),
+  authChange: (current: string, next: string, role: Role) =>
+    post<{ ok: true; role: Role }>('/auth/change', { current, next, role }),
+  authElevate: (passcode: string) =>
+    post<{ ok: true; elevatedForSeconds: number }>('/auth/elevate', { passcode }),
+  authDropElevation: () => post<{ ok: true }>('/auth/drop-elevation'),
 
   backups: () => request<BackupListing>('/backups'),
   runBackup: () => post<{ ok: boolean; file?: string; error?: string }>('/backup'),

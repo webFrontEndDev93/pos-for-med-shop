@@ -10,7 +10,7 @@ import '../styles/pages.css';
 export function SettingsPage() {
   const {
     settings, products, batches, customers, recentSales,
-    setSettings, notify, reportError, reload, theme, toggleTheme, signOut,
+    setSettings, notify, reportError, reload, theme, toggleTheme, signOut, hasStaffPasscode,
   } = useStore();
 
   const [draft, setDraft] = useState<Settings>(settings);
@@ -456,12 +456,15 @@ export function SettingsPage() {
           <div className="card-body">
             <div className="setting-row" style={{ paddingTop: 0 }}>
               <div>
-                <div className="setting-name">Shop passcode</div>
+                <div className="setting-name">Passcodes</div>
                 <div className="setting-desc">
-                  Required each time MediPOS starts. Changing it signs out every other device.
+                  The owner passcode unlocks everything. The counter passcode
+                  {hasStaffPasscode ? ' is set and ' : ' is not set yet — it would '}
+                  let staff bill and look up stock without reaching cancellations, takings,
+                  prices or Settings.
                 </div>
               </div>
-              <Button icon="shield" onClick={() => setChangingPasscode(true)}>Change passcode</Button>
+              <Button icon="shield" onClick={() => setChangingPasscode(true)}>Manage passcodes</Button>
             </div>
             <div className="setting-row">
               <div>
@@ -520,7 +523,8 @@ export function SettingsPage() {
 /* ------------------------------------------------------------ passcode */
 
 function PasscodeDialog({ onClose }: { onClose: () => void }) {
-  const { notify } = useStore();
+  const { notify, hasStaffPasscode, refreshRole } = useStore();
+  const [role, setRole] = useState<'admin' | 'staff'>('admin');
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -528,14 +532,22 @@ function PasscodeDialog({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const mismatch = confirm.length > 0 && next !== confirm;
-  const invalid = next.length < 4 || next !== confirm || !current;
+  const removingStaff = role === 'staff' && next === '' && confirm === '';
+  const invalid = removingStaff
+    ? !current
+    : next.length < 4 || next !== confirm || !current;
 
   const submit = async () => {
     setSaving(true);
     setError(null);
     try {
-      await api.authChange(current, next);
-      notify('success', 'Passcode changed', 'Other devices have been signed out.');
+      await api.authChange(current, next, role);
+      await refreshRole();
+      notify(
+        'success',
+        removingStaff ? 'Counter passcode removed' : 'Passcode changed',
+        'Every device has been signed out.',
+      );
       onClose();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not change the passcode.');
@@ -546,24 +558,41 @@ function PasscodeDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal
-      title="Change passcode"
-      subtitle="Everyone using the counter will need the new one."
-      width="26rem"
+      title="Passcodes"
+      subtitle="Only the owner can change these."
+      width="28rem"
       onClose={onClose}
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={submit} disabled={invalid || saving}>
-            {saving ? 'Saving…' : 'Change passcode'}
+            {saving ? 'Saving…' : removingStaff ? 'Remove counter passcode' : 'Change passcode'}
           </Button>
         </>
       }
     >
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-        <Field label="Current passcode">
+        <Field label="Which passcode">
+          <select
+            className="select"
+            value={role}
+            onChange={(e) => { setRole(e.target.value as 'admin' | 'staff'); setError(null); }}
+          >
+            <option value="admin">Owner — full access</option>
+            <option value="staff">
+              Counter — billing only {hasStaffPasscode ? '(set)' : '(not set yet)'}
+            </option>
+          </select>
+        </Field>
+        <Field label="Owner passcode" hint="Confirms it is you, whichever one you are changing.">
           <input className="input" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
         </Field>
-        <Field label="New passcode" hint="At least 4 characters.">
+        <Field
+          label={role === 'staff' ? 'New counter passcode' : 'New owner passcode'}
+          hint={role === 'staff'
+            ? 'At least 4 characters. Leave both boxes blank to remove the counter passcode.'
+            : 'At least 4 characters.'}
+        >
           <input className="input" type="password" value={next} onChange={(e) => setNext(e.target.value)} />
         </Field>
         <Field label="Confirm new passcode" error={mismatch ? 'Those two do not match.' : undefined}>

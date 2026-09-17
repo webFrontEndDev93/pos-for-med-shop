@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
-import { api, ApiError, setUnauthenticatedHandler } from './api';
+import { api, ApiError, setUnauthenticatedHandler, type Role } from './api';
 import { setCurrencySymbol } from './format';
 import type { Alerts, Batch, Bootstrap, Customer, Product, Sale, Settings } from './types';
 
@@ -22,6 +22,15 @@ interface Store {
   loadError: string | null;
   lock: LockState;
   minPasscodeLength: number;
+  /** Who is signed in. Null before the first check. */
+  role: Role | null;
+  /** True for an owner session, or a counter session under manager override. */
+  isAdmin: boolean;
+  /** Seconds left on a manager override, 0 when not elevated. */
+  elevatedFor: number;
+  hasStaffPasscode: boolean;
+  refreshRole: () => Promise<void>;
+  dropElevation: () => Promise<void>;
   unlock: () => void;
   signOut: () => Promise<void>;
   settings: Settings;
@@ -57,6 +66,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [lock, setLock] = useState<LockState>('checking');
   const [minPasscodeLength, setMinPasscodeLength] = useState(4);
+  const [role, setRole] = useState<Role | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [elevatedFor, setElevatedFor] = useState(0);
+  const [hasStaffPasscode, setHasStaffPasscode] = useState(false);
   const [settings, setSettings] = useState<Settings>({} as Settings);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -128,6 +141,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const status = await api.authStatus();
       setMinPasscodeLength(status.minLength);
+      setRole(status.role);
+      setIsAdmin(status.isAdmin);
+      setElevatedFor(status.elevatedForSeconds);
+      setHasStaffPasscode(status.hasStaffPasscode);
       if (!status.required || status.authenticated) {
         setLock('open');
         await loadShop();
@@ -150,13 +167,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => setUnauthenticatedHandler(null);
   }, []);
 
+  const refreshRole = useCallback(async () => {
+    try {
+      const status = await api.authStatus();
+      setRole(status.role);
+      setIsAdmin(status.isAdmin);
+      setElevatedFor(status.elevatedForSeconds);
+      setHasStaffPasscode(status.hasStaffPasscode);
+    } catch {
+      /* the next gated call will surface it */
+    }
+  }, []);
+
+  const dropElevation = useCallback(async () => {
+    await api.authDropElevation().catch(() => undefined);
+    await refreshRole();
+  }, [refreshRole]);
+
+  // Count the manager override down so the till visibly returns to staff.
+  useEffect(() => {
+    if (elevatedFor <= 0) return;
+    const timer = window.setInterval(() => {
+      setElevatedFor((seconds) => {
+        if (seconds <= 1) {
+          setIsAdmin(role === 'admin');
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [elevatedFor, role]);
+
   const unlock = useCallback(() => {
     setLock('open');
+    void refreshRole();
     void loadShop();
-  }, [loadShop]);
+  }, [loadShop, refreshRole]);
 
   const signOut = useCallback(async () => {
     await api.authLogout().catch(() => undefined);
+    setRole(null);
+    setIsAdmin(false);
+    setElevatedFor(0);
     setLock('login');
   }, []);
 
@@ -190,6 +243,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => ({
     ready, loadError, lock, minPasscodeLength, unlock, signOut,
+    role, isAdmin, elevatedFor, hasStaffPasscode, refreshRole, dropElevation,
     settings, products, batches, customers, recentSales, alerts,
     theme,
     toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
@@ -197,6 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     reload, setProducts, setBatches, setCustomers, setSettings, registerSale,
   }), [
     ready, loadError, lock, minPasscodeLength, unlock, signOut,
+    role, isAdmin, elevatedFor, hasStaffPasscode, refreshRole, dropElevation,
     settings, products, batches, customers, recentSales, alerts,
     theme, toasts, notify, dismissToast, reportError, reload, registerSale,
   ]);

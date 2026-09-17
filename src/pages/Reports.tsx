@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Modal, Stat } from '../components/ui';
 import { HourChart, PaymentMix, TopProducts, TrendChart } from '../components/charts';
 import { Receipt } from '../components/Receipt';
+import { useAdminAction } from '../components/AdminGate';
 import '../styles/pages.css';
 
 type Preset = 'today' | 'week' | 'month' | 'quarter' | 'custom';
@@ -27,7 +28,10 @@ function rangeFor(preset: Preset): { from: string; to: string } {
 }
 
 export function Reports() {
-  const { settings, alerts, notify, reportError, reload } = useStore();
+  const { settings, alerts, notify, reportError, reload, isAdmin } = useStore();
+  // Reports is owner-only, but an override can lapse mid-visit — so the cancel
+  // button re-checks rather than trusting the screen being open.
+  const { guard, gate } = useAdminAction();
   const [preset, setPreset] = useState<Preset>('week');
   const [range, setRange] = useState(() => rangeFor('week'));
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -357,7 +361,12 @@ export function Reports() {
                           <div className="row" style={{ justifyContent: 'flex-end', gap: 2 }}>
                             <Button variant="ghost" size="sm" iconOnly icon="receipt" onClick={() => setViewing(sale)} aria-label={`View ${sale.invoiceNo}`} />
                             {sale.status !== 'void' && (
-                              <Button variant="ghost" size="sm" iconOnly icon="close" onClick={() => setVoiding(sale)} aria-label={`Cancel ${sale.invoiceNo}`} />
+                              <Button
+                                variant="ghost" size="sm" iconOnly
+                                icon={isAdmin ? 'close' : 'shield'}
+                                onClick={guard('cancel a bill', () => setVoiding(sale))}
+                                aria-label={`Cancel ${sale.invoiceNo}`}
+                              />
                             )}
                           </div>
                         </td>
@@ -370,6 +379,8 @@ export function Reports() {
           </div>
         </>
       )}
+
+      {gate}
 
       {viewing && (
         <Modal

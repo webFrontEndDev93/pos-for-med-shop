@@ -27,8 +27,15 @@ Download the LTS installer from <https://nodejs.org> and run it. One time only.
 | Windows | Double-click `start.bat` |
 | macOS / Linux | `./start.sh` |
 
-Then open <http://localhost:4173>. The first screen asks you to **set a passcode** —
-this is what staff type to open the counter each day.
+Then open <http://localhost:4173>. The first screen asks you to set **two passcodes**:
+
+- an **owner** passcode, which unlocks everything;
+- a **counter** passcode for staff, which bills and looks up stock but cannot cancel
+  bills, see takings, change prices or open Settings.
+
+The counter one is optional — leave it blank to run on a single code and add it later
+in Settings. When staff need something owner-only, MediPOS asks for the owner passcode
+on the spot, so you approve it without anyone signing out.
 
 ## 4. Make it start by itself
 
@@ -77,7 +84,7 @@ paper**. Install the printer in the operating system as usual, then:
 | --- | --- |
 | Data file | `server/data/db.json` |
 | Backups | The folder set in Settings |
-| Passcode | `server/data/auth.json` — delete it and restart to reset |
+| Passcodes | `server/data/auth.json` — delete it and restart to set new ones |
 | Logs (Linux) | `/var/log/medipos.log` |
 | Logs (macOS) | `~/Library/Logs/medipos.log` |
 | Change port | `PORT=4174` before starting |
@@ -92,8 +99,9 @@ protecting it, so:
 - Use a passcode you would be happy defending, not `1234`.
 - On an untrusted network, bind it to the machine only: `HOST=127.0.0.1`.
 
-There are no separate staff accounts — anyone with the passcode can void bills and
-see takings.
+Give staff the **counter** passcode, never the owner one. Bills do not record which
+person rang them up, so there is no per-person audit trail — the roles limit what can
+be done, not who did it.
 
 ## Updating
 

@@ -8,10 +8,11 @@ import { DB_FILE } from './db.mjs';
 import { ensureSeed } from './seed.mjs';
 import { startBackupSchedule, stopBackupSchedule } from './backup.mjs';
 import {
-  authEnabled, isConfigured, setPasscode, verifyPasscode,
-  createSession, validateSession, destroySession, destroyAllSessions,
+  authEnabled, isConfigured, hasStaffPasscode, setPasscode, roleFor, verifyAdmin,
+  createSession, getSession, validateSession, destroySession, destroyAllSessions,
+  isAdmin, elevate, dropElevation, elevationSecondsLeft,
   lockedFor, recordFailure, clearFailures,
-  readCookie, sessionCookie, clearCookie, COOKIE, MIN_PASSCODE_LENGTH,
+  readCookie, sessionCookie, clearCookie, COOKIE, MIN_PASSCODE_LENGTH, ELEVATION_SECONDS,
 } from './auth.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -33,10 +34,11 @@ const MIME = {
 };
 
 /** Splits '/api/sales/:id/void' into segments once, at startup. */
-const compiled = routes.map(([method, pattern, handler]) => ({
+const compiled = routes.map(([method, pattern, handler, scope]) => ({
   method,
   segments: pattern.split('/').filter(Boolean),
   handler,
+  scope,
 }));
 
 function match(method, pathname) {
@@ -50,7 +52,7 @@ function match(method, pathname) {
       if (seg.startsWith(':')) params[seg.slice(1)] = decodeURIComponent(parts[i]);
       else if (seg !== parts[i]) { ok = false; break; }
     }
-    if (ok) return { handler: route.handler, params };
+    if (ok) return { handler: route.handler, params, scope: route.scope };
   }
   return null;
 }
@@ -126,10 +128,17 @@ async function handleAuth(req, res, pathname) {
 
   if (action === 'status' && req.method === 'GET') {
     const locked = lockedFor(callerKey(req));
+    const session = getSession(readCookie(req.headers.cookie, COOKIE));
     send(res, 200, {
       required: authEnabled(),
       configured: isConfigured(),
-      authenticated: !authEnabled() || validateSession(readCookie(req.headers.cookie, COOKIE)),
+      hasStaffPasscode: hasStaffPasscode(),
+      authenticated: !authEnabled() || Boolean(session),
+      // With the gate off everyone is effectively the owner.
+      role: !authEnabled() ? 'admin' : session?.role ?? null,
+      isAdmin: !authEnabled() || isAdmin(session),
+      elevatedForSeconds: elevationSecondsLeft(session),
+      elevationSeconds: ELEVATION_SECONDS,
       minLength: MIN_PASSCODE_LENGTH,
       lockedForSeconds: Math.ceil(locked / 1000),
     });
@@ -158,13 +167,14 @@ async function handleAuth(req, res, pathname) {
       return;
     }
     try {
-      await setPasscode(body.passcode);
+      await setPasscode(body.passcode, 'admin');
+      // The counter passcode is optional; a one-person shop skips it.
+      if (String(body.staffPasscode ?? '') !== '') await setPasscode(body.staffPasscode, 'staff');
     } catch (err) {
       send(res, 400, { error: err.message });
       return;
     }
-    const token = createSession();
-    send(res, 200, { ok: true }, { 'set-cookie': sessionCookie(token) });
+    send(res, 200, { ok: true, role: 'admin' }, { 'set-cookie': sessionCookie(createSession('admin')) });
     return;
   }
 
@@ -181,7 +191,8 @@ async function handleAuth(req, res, pathname) {
       send(res, 409, { error: 'No passcode is set yet.', code: 'setup_required' });
       return;
     }
-    if (!verifyPasscode(body.passcode)) {
+    const role = roleFor(body.passcode);
+    if (!role) {
       const record = recordFailure(key);
       const left = Math.max(0, 5 - record.fails);
       send(res, 401, {
@@ -192,7 +203,37 @@ async function handleAuth(req, res, pathname) {
       return;
     }
     clearFailures(key);
-    send(res, 200, { ok: true }, { 'set-cookie': sessionCookie(createSession()) });
+    send(res, 200, { ok: true, role }, { 'set-cookie': sessionCookie(createSession(role)) });
+    return;
+  }
+
+  // Manager override: the owner types their passcode on a staff session so one
+  // admin action can go through, without anyone signing out mid-queue.
+  if (action === 'elevate') {
+    const locked = lockedFor(key);
+    if (locked > 0) {
+      send(res, 429, { error: `Too many wrong passcodes. Try again in ${Math.ceil(locked / 1000)} seconds.` });
+      return;
+    }
+    const token = readCookie(req.headers.cookie, COOKIE);
+    if (!getSession(token)) {
+      send(res, 401, { error: 'Please sign in again.' });
+      return;
+    }
+    if (!verifyAdmin(body.passcode)) {
+      recordFailure(key);
+      send(res, 401, { error: 'That is not the owner passcode.' });
+      return;
+    }
+    clearFailures(key);
+    elevate(token);
+    send(res, 200, { ok: true, elevatedForSeconds: ELEVATION_SECONDS });
+    return;
+  }
+
+  if (action === 'drop-elevation') {
+    dropElevation(readCookie(req.headers.cookie, COOKIE));
+    send(res, 200, { ok: true });
     return;
   }
 
@@ -203,24 +244,33 @@ async function handleAuth(req, res, pathname) {
   }
 
   if (action === 'change') {
-    if (authEnabled() && !validateSession(readCookie(req.headers.cookie, COOKIE))) {
+    const token = readCookie(req.headers.cookie, COOKIE);
+    const session = getSession(token);
+    if (authEnabled() && !session) {
       send(res, 401, { error: 'Please sign in again.' });
       return;
     }
-    if (isConfigured() && !verifyPasscode(body.current)) {
-      recordFailure(key);
-      send(res, 401, { error: 'The current passcode is not right.' });
+    // Only the owner changes passcodes — otherwise staff could promote themselves.
+    if (authEnabled() && !isAdmin(session)) {
+      send(res, 403, { error: 'That needs the owner passcode.', code: 'admin_required' });
       return;
     }
+    if (isConfigured() && !verifyAdmin(body.current)) {
+      recordFailure(key);
+      send(res, 401, { error: 'The owner passcode is not right.' });
+      return;
+    }
+    const role = body.role === 'staff' ? 'staff' : 'admin';
     try {
-      await setPasscode(body.next);
+      await setPasscode(body.next, role);
     } catch (err) {
       send(res, 400, { error: err.message });
       return;
     }
-    // Changing the passcode signs every other device out.
+    // Changing a passcode signs every device out, including this one if the
+    // owner code changed.
     destroyAllSessions();
-    send(res, 200, { ok: true }, { 'set-cookie': sessionCookie(createSession()) });
+    send(res, 200, { ok: true, role }, { 'set-cookie': sessionCookie(createSession('admin')) });
     return;
   }
 
@@ -254,12 +304,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Health stays open so a service manager can check the till without a session.
+  let session = null;
   if (authEnabled() && pathname !== '/api/health') {
     if (!isConfigured()) {
       send(res, 401, { error: 'Set a passcode before using MediPOS.', code: 'setup_required' });
       return;
     }
-    if (!validateSession(readCookie(req.headers.cookie, COOKIE))) {
+    session = getSession(readCookie(req.headers.cookie, COOKIE));
+    if (!session) {
       send(res, 401, { error: 'Please sign in again.', code: 'unauthenticated' });
       return;
     }
@@ -268,6 +320,16 @@ const server = http.createServer(async (req, res) => {
   const route = match(req.method, pathname);
   if (!route) {
     send(res, 404, { error: `No API route for ${req.method} ${pathname}` });
+    return;
+  }
+
+  // The real gate. The UI hides these too, but a staff session must not be able
+  // to reach them by typing the URL or replaying a request.
+  if (route.scope === 'admin' && authEnabled() && !isAdmin(session)) {
+    send(res, 403, {
+      error: 'That needs the owner passcode.',
+      code: 'admin_required',
+    });
     return;
   }
 

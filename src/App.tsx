@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Lock } from './components/Lock';
+import { AdminGate } from './components/AdminGate';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { Icon } from './components/Icon';
@@ -21,17 +22,23 @@ const SHORTCUTS: Record<string, Route> = {
 };
 
 export default function App() {
-  const { ready, loadError, reload, settings, lock, minPasscodeLength, unlock } = useStore();
+  const { ready, loadError, reload, settings, lock, minPasscodeLength, unlock, isAdmin } = useStore();
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('medipos.sidebar') === 'collapsed',
   );
   const [clock, setClock] = useState(() => new Date());
+  const [gateFor, setGateFor] = useState<Route | null>(null);
 
   const navigate = useCallback((next: Route) => {
     setRoute(next);
     window.location.hash = `#/${next}`;
   }, []);
+
+  // Reports and Settings are the owner's. A counter session is offered the
+  // override rather than a dead end, so the owner can look without signing out.
+  const ADMIN_ROUTES: Route[] = ['reports', 'settings'];
+  const blocked = ADMIN_ROUTES.includes(route) && !isAdmin;
 
   useEffect(() => {
     const onHashChange = () => setRoute(routeFromHash());
@@ -115,12 +122,44 @@ export default function App() {
           </span>
         </header>
 
-        {route === 'billing' && <Billing />}
-        {route === 'inventory' && <Inventory />}
-        {route === 'customers' && <Customers />}
-        {route === 'reports' && <Reports />}
-        {route === 'settings' && <SettingsPage />}
+        {blocked ? (
+          <div className="page">
+            <div className="card" style={{ maxWidth: '30rem', margin: '4rem auto', textAlign: 'center' }}>
+              <div className="card-body">
+                <span className="empty-icon" style={{ margin: '0 auto var(--space-4)' }}>
+                  <Icon name="shield" size={22} />
+                </span>
+                <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 650, marginBottom: 'var(--space-2)' }}>
+                  {ROUTE_TITLES[route]} is owner-only
+                </h2>
+                <p className="muted" style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-5)' }}>
+                  You are signed in with the counter passcode. Ask the owner to unlock it, or
+                  sign in with the owner passcode.
+                </p>
+                <Button variant="primary" icon="shield" onClick={() => setGateFor(route)}>
+                  Enter owner passcode
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {route === 'billing' && <Billing />}
+            {route === 'inventory' && <Inventory />}
+            {route === 'customers' && <Customers />}
+            {route === 'reports' && <Reports />}
+            {route === 'settings' && <SettingsPage />}
+          </>
+        )}
       </div>
+
+      {gateFor && (
+        <AdminGate
+          action={`open ${ROUTE_TITLES[gateFor].toLowerCase()}`}
+          onClose={() => setGateFor(null)}
+          onElevated={() => setGateFor(null)}
+        />
+      )}
 
       <Toasts />
     </div>

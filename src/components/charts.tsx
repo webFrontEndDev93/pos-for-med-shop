@@ -269,10 +269,15 @@ export function HourChart({ data }: { data: { hour: number; revenue: number; bil
 const MODE_COLORS: Record<string, string> = {
   cash: 'var(--series-1)',
   card: 'var(--series-2)',
-  upi: 'var(--series-3)',
+  digital: 'var(--series-3)',
   credit: 'var(--series-4)',
 };
-const MODE_LABELS: Record<string, string> = { cash: 'Cash', card: 'Card', upi: 'UPI', credit: 'Credit' };
+const MODE_LABELS: Record<string, string> = {
+  cash: 'Cash',
+  card: 'Card',
+  digital: 'Digital',
+  credit: 'Udhaar',
+};
 
 /**
  * Share of takings by payment method. Every segment carries a written label and
@@ -292,7 +297,7 @@ export function PaymentMix({ data }: { data: { mode: string; amount: number; bil
               key={d.mode}
               className="stack-seg"
               style={{ width: `${(d.amount / total) * 100}%`, background: MODE_COLORS[d.mode] }}
-              title={`${MODE_LABELS[d.mode]} — ${money(d.amount)}`}
+              title={`${MODE_LABELS[d.mode] ?? d.mode} — ${money(d.amount)}`}
             />
           ))}
       </div>
@@ -302,7 +307,7 @@ export function PaymentMix({ data }: { data: { mode: string; amount: number; bil
           <div className="row-between" key={d.mode} style={{ fontSize: 'var(--text-sm)' }}>
             <span className="row" style={{ gap: 'var(--space-2)' }}>
               <span className="legend-swatch" style={{ background: MODE_COLORS[d.mode] }} />
-              <span>{MODE_LABELS[d.mode]}</span>
+              <span>{MODE_LABELS[d.mode] ?? d.mode}</span>
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
                 {d.bills} bill{d.bills === 1 ? '' : 's'}
               </span>

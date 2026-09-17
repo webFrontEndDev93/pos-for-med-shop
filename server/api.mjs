@@ -144,7 +144,7 @@ function createSale(db, body) {
     roundOff: db.settings.roundOffTotals !== false,
   });
 
-  const paymentMode = ['cash', 'card', 'upi', 'credit'].includes(str(body.paymentMode))
+  const paymentMode = ['cash', 'card', 'digital', 'credit'].includes(str(body.paymentMode))
     ? str(body.paymentMode)
     : 'cash';
   const paid = paymentMode === 'credit' ? round2(num(body.paid)) : totals.total;
@@ -256,7 +256,7 @@ function reportSummary(db, from, to) {
     }
   }
 
-  const byPaymentMode = ['cash', 'card', 'upi', 'credit'].map((mode) => ({
+  const byPaymentMode = ['cash', 'card', 'digital', 'credit'].map((mode) => ({
     mode,
     amount: round2(sales.filter((s) => s.paymentMode === mode).reduce((sum, s) => sum + s.total, 0)),
     bills: sales.filter((s) => s.paymentMode === mode).length,
@@ -473,13 +473,15 @@ export const routes = [
       const amount = round2(num(body.amount));
       if (amount <= 0) throw bad('Payment amount must be greater than zero.');
       const owed = round2(customer.creditBalance ?? 0);
-      if (amount > owed) throw bad(`That is more than the ₹${owed} outstanding.`);
+      if (amount > owed) {
+        throw bad(`That is more than the ${db.settings.currencySymbol ?? 'Rs'} ${owed} outstanding.`);
+      }
       customer.creditBalance = round2(owed - amount);
       const payment = {
         id: id('pay'),
         customerId: customer.id,
         amount,
-        mode: ['cash', 'card', 'upi'].includes(str(body.mode)) ? str(body.mode) : 'cash',
+        mode: ['cash', 'card', 'digital'].includes(str(body.mode)) ? str(body.mode) : 'cash',
         note: str(body.note),
         at: new Date().toISOString(),
       };

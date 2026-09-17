@@ -72,7 +72,7 @@ export function CustomerPicker({
               className="input"
               value={draft.phone}
               onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-              placeholder="+91 98450 00000"
+              placeholder="+92 300 1234567"
             />
           </Field>
           <Field label="Referring doctor">
@@ -98,7 +98,7 @@ export function CustomerPicker({
   return (
     <Modal
       title="Attach customer"
-      subtitle="Needed for credit bills and for keeping a purchase history."
+      subtitle="Needed for udhaar bills and for keeping a purchase history."
       width="32rem"
       onClose={onClose}
       footer={

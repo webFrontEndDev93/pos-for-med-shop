@@ -4,8 +4,10 @@ import type { Sale, Settings } from '../lib/types';
 const MODE_LABEL: Record<string, string> = {
   cash: 'Cash',
   card: 'Card',
-  upi: 'UPI',
-  credit: 'Credit (on account)',
+  digital: 'Digital',
+  credit: 'Udhaar (on account)',
+  // Bills written before the tender was renamed still print sensibly.
+  upi: 'Digital',
 };
 
 /**
@@ -100,7 +102,7 @@ export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) 
         <span>TOTAL</span><span>{money(sale.total)}</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span>Paid ({MODE_LABEL[sale.paymentMode]})</span><span>{plain(sale.paid)}</span>
+        <span>Paid ({MODE_LABEL[sale.paymentMode] ?? sale.paymentMode})</span><span>{plain(sale.paid)}</span>
       </div>
       {sale.due > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>

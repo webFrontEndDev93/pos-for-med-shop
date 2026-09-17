@@ -95,7 +95,7 @@ table.cart thead th {
   text-align: left; padding: var(--space-3) var(--space-4); white-space: nowrap;
   border-bottom: 1px solid var(--border);
 }
-table.cart th.right, table.cart td.right { text-align: right; }
+table.cart th.right, table.cart td.right { text-align: right; white-space: nowrap; }
 table.cart th.center, table.cart td.center { text-align: center; }
 table.cart tbody td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
 table.cart tbody tr { transition: background var(--fast); }

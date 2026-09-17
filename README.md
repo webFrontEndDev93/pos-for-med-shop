@@ -1,7 +1,7 @@
 # MediPOS
 
 A lightweight, offline-first point of sale for a medicine shop. Fast keyboard-driven
-billing, batch and expiry tracking, customer credit, and a reports dashboard — all
+billing, batch and expiry tracking, customer udhaar, and a reports dashboard — all
 running on one machine with no internet connection and no database server.
 
 ![The billing counter](docs/screens/billing.png)
@@ -18,11 +18,14 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
   and rejected by the server even if a stale browser tab tries to bill one.
 - **Prescription-only medicine needs a paper trail.** Adding an Rx item to a bill makes
   the prescription reference mandatory before payment can be taken.
-- **Prices are GST-inclusive.** MRP is printed on the pack, so tax is *back-calculated*
-  out of the line total and split into CGST/SGST — the way an Indian pharmacy bill
-  actually reads — rather than added on top.
-- **Regulars buy on credit.** Bills can be part-paid or fully deferred to a customer's
+- **Prices are tax-inclusive.** MRP is printed on the pack, so tax is *back-calculated*
+  out of the line total rather than added on top.
+- **Regulars buy on udhaar.** Bills can be part-paid or fully deferred to a customer's
   account, with a ledger and settlement flow.
+- **Money is in Pakistani rupees**, formatted `Rs 1,842,424.50`. Four tenders are
+  supported: Cash, Credit/Debit Card, Digital (EasyPaisa, JazzCash, QR or bank
+  transfer), and Udhaar. Change the symbol from Settings if you need another
+  currency — a word-like symbol gets its spacing automatically.
 
 ## Running it
 
@@ -80,7 +83,7 @@ extra setup: it types the code and presses Enter, which is exactly the flow abov
 ### Screens
 
 **Billing** — search, cart with per-line discounts, batch override, customer attach,
-cash/UPI/card/credit tender with change calculation, and a printable 80mm receipt.
+cash/card/digital/udhaar tender with change calculation, and a printable 80mm receipt.
 Expiry warnings appear on the line itself, so a short-dated pack is never sold by
 accident.
 
@@ -89,14 +92,14 @@ filters for low stock, expiring soon, expired and out of stock.
 
 ![Inventory](docs/screens/inventory.png)
 
-**Customers** — purchase history, prescription references, credit balance and
+**Customers** — purchase history, prescription references, udhaar balance and
 settlement.
 
 ![Customers](docs/screens/customers.png)
 
 **Reports** — revenue and profit over time, best sellers, payment mix, busiest hours,
 a reorder list, and a searchable bill register with CSV export and bill cancellation
-(which returns stock and reverses any credit).
+(which returns stock and reverses any udhaar).
 
 ![Reports](docs/screens/reports.png)
 
@@ -149,11 +152,33 @@ backup** saves it through the browser; restoring replaces everything and keeps a
 of the previous state in `server/data/backups/` first.
 
 Back up daily to somewhere other than the shop machine. A till that loses its stock and
-credit records has lost the business's memory.
+udhaar records has lost the business's memory.
 
 ## Limits worth knowing
 
 - Single shop, single terminal. Several browsers can point at one server on the LAN,
   but there is no login, no per-user audit trail and no locking between tills.
-- No purchase orders, supplier ledger, or GST return filing.
-- Credit is tracked per customer as a running balance, not as an aged-debtor report.
+- No purchase orders, supplier ledger, or sales-tax return filing.
+- Udhaar is tracked per customer as a running balance, not as an aged-debtor report.
+- **The tax lines still read CGST/SGST**, which is an Indian split rather than a
+  Pakistani one, and the demo catalogue is stocked with Indian brands. Both are
+  cosmetic — the arithmetic is a plain tax-inclusive back-calculation — but they
+  need replacing before the app is used in a real Pakistani shop. See below.
+
+## Still to localise for Pakistan
+
+The currency and tenders are done. Two things are knowingly left as they were,
+because both need a decision rather than a guess:
+
+1. **Tax presentation.** Bills print `CGST` and `SGST`, which is the Indian
+   intra-state split. Pakistan levies a single sales tax, and most pharmaceutical
+   products are exempt. The totals are computed as a plain tax-inclusive
+   back-calculation, so the arithmetic is unaffected — only the labels and the
+   split are wrong. Deciding this needs your actual position: exempt, a single
+   sales-tax line, or a rate per product.
+2. **The demo catalogue.** The seeded medicines, manufacturers, customer names,
+   phone numbers and suppliers are Indian. It is demo data that a real shop
+   replaces, but it makes the first run read oddly next to rupee amounts.
+
+The `gstin` setting is also still named for the Indian identifier; it now defaults
+to blank, and the receipt omits it when empty rather than printing something false.

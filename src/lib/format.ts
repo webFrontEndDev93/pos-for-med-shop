@@ -1,26 +1,39 @@
 /** Formatting and date helpers shared across every screen. */
 
-let symbol = '₹';
+const DEFAULT_SYMBOL = 'Rs';
+
+let symbol = DEFAULT_SYMBOL;
+/** Word-like symbols ("Rs", "PKR") need a gap; glyphs ("₨", "$") do not. */
+let gap = ' ';
+
 export const setCurrencySymbol = (next: string) => {
-  symbol = next || '₹';
+  symbol = next || DEFAULT_SYMBOL;
+  gap = /[A-Za-z]$/.test(symbol) ? ' ' : '';
 };
 
-const grouped = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const groupedWhole = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+// en-PK groups in thousands (1,842,424.50) rather than the Indian lakh style.
+const grouped = new Intl.NumberFormat('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const groupedWhole = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
 
-export const money = (value: number) => `${symbol}${grouped.format(Number(value) || 0)}`;
-export const moneyShort = (value: number) => `${symbol}${groupedWhole.format(Math.round(Number(value) || 0))}`;
+const withSymbol = (text: string) => `${symbol}${gap}${text}`;
+
+export const money = (value: number) => withSymbol(grouped.format(Number(value) || 0));
+export const moneyShort = (value: number) => withSymbol(groupedWhole.format(Math.round(Number(value) || 0)));
 export const plain = (value: number) => grouped.format(Number(value) || 0);
 export const count = (value: number) => groupedWhole.format(Number(value) || 0);
 
-/** ₹1.2L / ₹45.3k — keeps stat tiles and axis labels from wrapping. */
+/**
+ * Rs 1.8M / Rs 45.3k — keeps stat tiles and axis labels from wrapping.
+ * Scales in thousands and millions to match the en-PK digit grouping; mixing
+ * international grouping with lakh/crore suffixes reads badly on an axis.
+ */
 export function compactMoney(value: number) {
   const n = Math.abs(Number(value) || 0);
   const sign = value < 0 ? '-' : '';
-  if (n >= 1e7) return `${sign}${symbol}${(n / 1e7).toFixed(2)}Cr`;
-  if (n >= 1e5) return `${sign}${symbol}${(n / 1e5).toFixed(2)}L`;
-  if (n >= 1e3) return `${sign}${symbol}${(n / 1e3).toFixed(1)}k`;
-  return `${sign}${symbol}${n.toFixed(0)}`;
+  if (n >= 1e9) return `${sign}${withSymbol(`${(n / 1e9).toFixed(2)}B`)}`;
+  if (n >= 1e6) return `${sign}${withSymbol(`${(n / 1e6).toFixed(2)}M`)}`;
+  if (n >= 1e3) return `${sign}${withSymbol(`${(n / 1e3).toFixed(1)}k`)}`;
+  return `${sign}${withSymbol(n.toFixed(0))}`;
 }
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -36,7 +49,7 @@ export const startOfMonth = () => `${todayISO().slice(0, 7)}-01`;
 /** 16 Sep 2026 */
 export function formatDate(iso: string) {
   if (!iso) return '—';
-  return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', {
+  return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-PK', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -46,18 +59,18 @@ export function formatDate(iso: string) {
 /** Sep 2026 — how expiry is printed on a medicine pack. */
 export function formatMonthYear(iso: string) {
   if (!iso) return '—';
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-PK', { month: 'short', year: 'numeric' });
 }
 
 export function formatDateTime(iso: string) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-IN', {
+  return new Date(iso).toLocaleString('en-PK', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
 
 export function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
 }
 
 export function daysUntil(iso: string) {

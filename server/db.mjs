@@ -18,15 +18,17 @@ export function emptyDb() {
     version: 1,
     settings: {
       shopName: 'MediPOS Pharmacy',
-      addressLine1: '12 Gandhi Road',
-      addressLine2: 'Bengaluru, Karnataka 560001',
-      phone: '+91 98450 00000',
+      addressLine1: 'Shop 14, Jinnah Super Market',
+      addressLine2: 'F-7 Markaz, Islamabad',
+      phone: '+92 51 234 5678',
       email: 'care@medipos.example',
-      gstin: '29ABCDE1234F1Z5',
-      drugLicense: 'KA-B-20-123456',
-      pharmacist: 'Dr. A. Rao, B.Pharm',
-      currency: 'INR',
-      currencySymbol: '₹',
+      // Left blank on purpose: the receipt omits an empty tax number rather
+      // than printing a made-up one. Fill in your own from Settings.
+      gstin: '',
+      drugLicense: 'ISB-2024-4471',
+      pharmacist: 'Dr. A. Khan, Pharm-D',
+      currency: 'PKR',
+      currencySymbol: 'Rs',
       invoicePrefix: 'INV',
       nextInvoiceSeq: 1,
       lowStockThreshold: 20,
@@ -45,6 +47,21 @@ export function emptyDb() {
 let cache = null;
 /** Serializes writes so concurrent requests can't interleave read-modify-write. */
 let writeChain = Promise.resolve();
+
+/**
+ * Brings an older db.json up to date in memory. Kept idempotent and silent so a
+ * shop that has been running for months can upgrade without losing history.
+ */
+function migrate(db) {
+  // 'upi' was the India-era name for what is now the 'digital' tender
+  // (EasyPaisa / JazzCash / QR). Past bills keep their totals, only the label moves.
+  for (const sale of db.sales) {
+    if (sale.paymentMode === 'upi') sale.paymentMode = 'digital';
+  }
+  for (const payment of db.payments) {
+    if (payment.mode === 'upi') payment.mode = 'digital';
+  }
+}
 
 function ensureDirs() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -65,6 +82,7 @@ export function readDb() {
     const parsed = JSON.parse(raw);
     // Merge so a db.json written by an older version still boots.
     cache = { ...emptyDb(), ...parsed, settings: { ...emptyDb().settings, ...(parsed.settings ?? {}) } };
+    migrate(cache);
   } catch (err) {
     const rescued = path.join(BACKUP_DIR, `corrupt-${Date.now()}.json`);
     fs.copyFileSync(DB_FILE, rescued);

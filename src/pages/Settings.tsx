@@ -168,7 +168,7 @@ export function SettingsPage() {
                   onChange={(e) => set('nextInvoiceSeq', Number(e.target.value))}
                 />
               </Field>
-              <Field label="Currency symbol">
+              <Field label="Currency symbol" hint="Shown before every amount. A word like “Rs” gets a space automatically.">
                 <input className="input" value={draft.currencySymbol ?? ''} onChange={(e) => set('currencySymbol', e.target.value)} />
               </Field>
               <Field label="Low stock threshold" hint="Used when a medicine has no reorder level of its own.">
@@ -215,7 +215,7 @@ export function SettingsPage() {
           <div className="card-body">
             <div className="stat-grid" style={{ marginBottom: 'var(--space-5)' }}>
               <Stat label="Medicines" value={products.length} foot={`${liveBatches} batches in stock`} tone="brand" icon="pill" />
-              <Stat label="Customers" value={customers.length} foot="Including credit accounts" tone="info" icon="customers" />
+              <Stat label="Customers" value={customers.length} foot="Including udhaar accounts" tone="info" icon="customers" />
               <Stat label="Recent bills" value={recentSales.length} foot="Last 50 kept in memory" tone="neutral" icon="receipt" />
               <Stat label="Stock value" value={money(stockValue)} foot="At purchase cost" tone="success" icon="box" />
             </div>

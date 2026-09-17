@@ -199,7 +199,10 @@ export function buildSeed() {
       const hasCustomer = rand() < 0.55;
       const customer = hasCustomer ? pick(customers) : null;
       const rxRequired = lines.some((l) => products.find((p) => p.id === l.productId)?.prescriptionRequired);
-      const mode = !customer ? pick(['cash', 'cash', 'upi', 'card']) : pick(['cash', 'upi', 'card', 'upi', 'credit']);
+      // Cash still dominates a Pakistani counter, with digital wallets a clear second.
+      const mode = !customer
+        ? pick(['cash', 'cash', 'cash', 'digital', 'card'])
+        : pick(['cash', 'cash', 'digital', 'digital', 'card', 'credit']);
       const paid = mode === 'credit' ? round2(totals.total * pick([0, 0, 0.5])) : totals.total;
       const due = round2(totals.total - paid);
       const cost = round2(lines.reduce((s, x) => s + x.costPrice * x.qty, 0));
@@ -251,7 +254,7 @@ export function buildSeed() {
       id: id('pay'),
       customerId: customer.id,
       amount,
-      mode: pick(['cash', 'cash', 'upi']),
+      mode: pick(['cash', 'cash', 'digital']),
       note: share === 1 ? 'Account cleared' : 'Part payment',
       at: when.toISOString(),
     });

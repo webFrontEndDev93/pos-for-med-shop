@@ -81,7 +81,8 @@ export interface SaleItem {
   discountPct: number;
 }
 
-export type PaymentMode = 'cash' | 'card' | 'upi' | 'credit';
+/** `credit` is udhaar — the bill goes on the customer's account, not a card. */
+export type PaymentMode = 'cash' | 'card' | 'digital' | 'credit';
 
 export interface Sale {
   id: string;
@@ -117,7 +118,7 @@ export interface Payment {
   id: string;
   customerId: string;
   amount: number;
-  mode: 'cash' | 'card' | 'upi';
+  mode: 'cash' | 'card' | 'digital';
   note: string;
   at: string;
 }

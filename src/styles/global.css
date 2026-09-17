@@ -51,7 +51,9 @@ svg { display: block; flex-shrink: 0; }
 
 /* ------------------------------------------------------------- utilities */
 
-.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+/* nowrap: a word-style currency symbol ("Rs 29.07") is wide enough to wrap in a
+   narrow column, which splits the symbol from its amount. */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; white-space: nowrap; }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-muted); }
 .secondary { color: var(--text-secondary); }
@@ -347,7 +349,7 @@ table.data tbody td {
 table.data tbody tr { transition: background var(--fast); }
 table.data tbody tr:hover { background: var(--surface-hover); }
 table.data tbody tr:last-child td { border-bottom: none; }
-table.data .right { text-align: right; }
+table.data .right { text-align: right; white-space: nowrap; }
 table.data .center { text-align: center; }
 table.data th.right { text-align: right; }
 

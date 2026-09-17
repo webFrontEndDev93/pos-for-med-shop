@@ -12,12 +12,22 @@ import { CustomerPicker } from '../components/CustomerPicker';
 import { Receipt } from '../components/Receipt';
 import '../styles/billing.css';
 
-const MODES: { mode: PaymentMode; label: string; icon: IconName }[] = [
-  { mode: 'cash', label: 'Cash', icon: 'cash' },
-  { mode: 'upi', label: 'UPI', icon: 'upi' },
-  { mode: 'card', label: 'Card', icon: 'card' },
-  { mode: 'credit', label: 'Credit', icon: 'wallet' },
+/**
+ * `title` carries the full meaning on hover and to screen readers; the button
+ * face stays short enough for four tiles across the tender panel.
+ *
+ * 'credit' is udhaar — the bill goes on the customer's account. It is kept
+ * distinct from 'card' so "Credit/Debit Card" can never be confused with it.
+ */
+const MODES: { mode: PaymentMode; label: string; title: string; icon: IconName }[] = [
+  { mode: 'cash', label: 'Cash', title: 'Cash', icon: 'cash' },
+  { mode: 'card', label: 'Card', title: 'Credit or debit card', icon: 'card' },
+  { mode: 'digital', label: 'Digital', title: 'EasyPaisa, JazzCash, QR or bank transfer', icon: 'qr' },
+  { mode: 'credit', label: 'Udhaar', title: 'Udhaar — put the bill on the customer’s account', icon: 'wallet' },
 ];
+
+/** Notes a Pakistani till actually holds. */
+const QUICK_CASH = [100, 500, 1000, 5000];
 
 export function Billing() {
   const { settings, batches, notify, reportError, registerSale } = useStore();
@@ -124,7 +134,7 @@ export function Billing() {
       return;
     }
     if (paymentMode === 'credit' && !customer) {
-      notify('warning', 'Customer required', 'Attach a customer before putting a bill on credit.');
+      notify('warning', 'Customer required', 'Attach a customer before putting a bill on udhaar.');
       setPickingCustomer(true);
       return;
     }
@@ -488,11 +498,13 @@ export function Billing() {
             <section className="tender-section">
               <div className="tender-heading"><span>Payment</span></div>
               <div className="pay-modes">
-                {MODES.map(({ mode, label, icon }) => (
+                {MODES.map(({ mode, label, title, icon }) => (
                   <button
                     key={mode}
                     type="button"
                     className="pay-mode"
+                    title={title}
+                    aria-label={title}
                     aria-pressed={paymentMode === mode}
                     onClick={() => { setPaymentMode(mode); setTendered(''); }}
                   >
@@ -501,6 +513,19 @@ export function Billing() {
                   </button>
                 ))}
               </div>
+
+              {paymentMode === 'digital' && (
+                <p className="hint row" style={{ gap: 6 }}>
+                  <Icon name="qr" size={12} />
+                  EasyPaisa, JazzCash, QR or bank transfer — collected in full.
+                </p>
+              )}
+              {paymentMode === 'card' && (
+                <p className="hint row" style={{ gap: 6 }}>
+                  <Icon name="card" size={12} />
+                  Credit or debit card — collected in full.
+                </p>
+              )}
 
               {paymentMode === 'cash' && (
                 <>
@@ -515,7 +540,7 @@ export function Billing() {
                     />
                   </Field>
                   <div className="quick-cash">
-                    {[100, 200, 500, 2000].map((value) => (
+                    {QUICK_CASH.map((value) => (
                       <Button key={value} size="sm" onClick={() => setTendered(String(value))}>
                         {money(value).replace('.00', '')}
                       </Button>
@@ -532,7 +557,7 @@ export function Billing() {
 
               {paymentMode === 'credit' && (
                 <>
-                  <Field label="Paying now" hint="Leave at 0 to put the whole bill on account.">
+                  <Field label="Paying now" hint="Leave at 0 to put the whole bill on udhaar.">
                     <input
                       className="input input--num"
                       type="number"
@@ -543,7 +568,7 @@ export function Billing() {
                     />
                   </Field>
                   <div className="totals-row" style={{ fontWeight: 650, color: 'var(--warning)' }}>
-                    <span>Goes on account</span><span className="value">{money(creditDue)}</span>
+                    <span>Goes on udhaar</span><span className="value">{money(creditDue)}</span>
                   </div>
                 </>
               )}

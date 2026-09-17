@@ -206,7 +206,7 @@ export function Reports() {
               icon="box"
             />
             <Stat
-              label="Credit outstanding"
+              label="Udhaar outstanding"
               value={money(summary.creditOutstanding)}
               foot="Owed by customers across all time"
               tone={summary.creditOutstanding > 0 ? 'warning' : 'success'}
@@ -395,7 +395,7 @@ export function Reports() {
             <>
               <strong>{voiding.invoiceNo}</strong> for {money(voiding.total)} will be marked cancelled.
               Every item on it goes back into stock
-              {voiding.due > 0 ? ', and the credit it created is written off' : ''}. The bill stays in the
+              {voiding.due > 0 ? ', and the udhaar it created is written off' : ''}. The bill stays in the
               record so your numbers still add up.
             </>
           }

@@ -94,8 +94,8 @@ export function Customers() {
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 'var(--space-4)' }}>
-        <Stat label="Credit outstanding" value={money(outstanding)} foot="Money owed to the shop" tone={outstanding > 0 ? 'warning' : 'success'} icon="wallet" />
-        <Stat label="On credit" value={withCredit} foot="Customers with a balance" tone="info" icon="customers" />
+        <Stat label="Udhaar outstanding" value={money(outstanding)} foot="Money owed to the shop" tone={outstanding > 0 ? 'warning' : 'success'} icon="wallet" />
+        <Stat label="On udhaar" value={withCredit} foot="Customers with a balance" tone="info" icon="customers" />
         <Stat label="Total customers" value={customers.length} foot="Including walk-ins you saved" tone="brand" icon="user" />
       </div>
 
@@ -123,7 +123,7 @@ export function Customers() {
             <EmptyState
               icon="customers"
               title={lens === 'credit' ? 'Nobody owes anything' : 'No customers match'}
-              text={lens === 'credit' ? 'Every credit bill has been settled.' : 'Try a different search, or add them now.'}
+              text={lens === 'credit' ? 'Every udhaar bill has been settled.' : 'Try a different search, or add them now.'}
             />
           ) : (
             <div className="table-wrap">
@@ -197,7 +197,7 @@ export function Customers() {
             <EmptyState
               icon="receipt"
               title="Pick a customer"
-              text="Their purchase history, prescriptions and credit ledger appear here."
+              text="Their purchase history, prescriptions and udhaar ledger appear here."
             />
           ) : (
             <>
@@ -411,7 +411,7 @@ function CustomerForm({ customer, onClose }: { customer: Customer | null; onClos
           <input className="input" value={draft.name ?? ''} onChange={(e) => set('name', e.target.value)} />
         </Field>
         <Field label="Phone">
-          <input className="input" value={draft.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="+91 98450 00000" />
+          <input className="input" value={draft.phone ?? ''} onChange={(e) => set('phone', e.target.value)} placeholder="+92 300 1234567" />
         </Field>
         <Field label="Referring doctor">
           <input className="input" value={draft.doctor ?? ''} onChange={(e) => set('doctor', e.target.value)} />
@@ -467,7 +467,7 @@ function SettleDialog({
 
   return (
     <Modal
-      title={`Settle credit — ${customer.name}`}
+      title={`Settle udhaar — ${customer.name}`}
       subtitle={`Outstanding balance ${money(customer.creditBalance)}`}
       width="28rem"
       onClose={onClose}
@@ -497,8 +497,8 @@ function SettleDialog({
         <Field label="Paid by">
           <select className="select" value={mode} onChange={(e) => setMode(e.target.value)}>
             <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="card">Card</option>
+            <option value="card">Credit / debit card</option>
+            <option value="digital">Digital (EasyPaisa, JazzCash, QR)</option>
           </select>
         </Field>
         <Field label="Note">

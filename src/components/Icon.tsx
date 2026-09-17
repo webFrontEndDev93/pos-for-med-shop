@@ -5,7 +5,7 @@
 export type IconName =
   | 'billing' | 'inventory' | 'customers' | 'reports' | 'settings' | 'search' | 'plus' | 'minus'
   | 'trash' | 'edit' | 'close' | 'check' | 'chevronLeft' | 'chevronRight' | 'chevronDown'
-  | 'alert' | 'clock' | 'pill' | 'print' | 'sun' | 'moon' | 'wallet' | 'card' | 'upi' | 'cash'
+  | 'alert' | 'clock' | 'pill' | 'print' | 'sun' | 'moon' | 'wallet' | 'card' | 'qr' | 'cash'
   | 'user' | 'phone' | 'download' | 'upload' | 'box' | 'trendUp' | 'trendDown' | 'receipt'
   | 'sparkles' | 'menu' | 'filter' | 'calendar' | 'rx' | 'shield' | 'refresh' | 'arrowRight';
 
@@ -33,7 +33,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   moon: <path d="M20.5 14.5A8.6 8.6 0 0 1 9.5 3.5a8.6 8.6 0 1 0 11 11z" />,
   wallet: <><path d="M20 8V6.5A1.5 1.5 0 0 0 18.5 5H5a2 2 0 0 0 0 4h14.5A1.5 1.5 0 0 1 21 10.5v7A1.5 1.5 0 0 1 19.5 19H5a2 2 0 0 1-2-2V7" /><path d="M17 14h.01" /></>,
   card: <><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19M6 15h4" /></>,
-  upi: <><path d="m6 3 5.5 9L6 21M13 3l5.5 9L13 21" /></>,
+  qr: <><rect x="3" y="3" width="7" height="7" rx="1.2" /><rect x="14" y="3" width="7" height="7" rx="1.2" /><rect x="3" y="14" width="7" height="7" rx="1.2" /><path d="M14 14h3.5v3.5H14zM20.5 14v.01M20.5 17.5v.01M20.5 21v.01M17 21v.01M14 21v.01" /></>,
   cash: <><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 12h.01M18 12h.01" /></>,
   user: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></>,
   phone: <path d="M21 16.5v2.8a2 2 0 0 1-2.2 2 19.5 19.5 0 0 1-8.5-3 19.2 19.2 0 0 1-6-6 19.5 19.5 0 0 1-3-8.6A2 2 0 0 1 3.3 2H6a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L7.1 9.9a16 16 0 0 0 6 6l1.3-1.1a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />,

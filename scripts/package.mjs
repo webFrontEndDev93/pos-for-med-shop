@@ -29,10 +29,13 @@ await fsp.rm(out, { recursive: true, force: true });
 await fsp.mkdir(out, { recursive: true });
 
 // The runtime is the server plus the built frontend — never the data folder,
-// which belongs to whichever shop is running it.
+// which belongs to whichever shop is running it. Match that one directory
+// exactly: a substring test would also swallow a future server/database.mjs
+// and ship a package that is quietly missing a file.
+const dataDir = path.join(root, 'server', 'data');
 await fsp.cp(path.join(root, 'server'), path.join(out, 'server'), {
   recursive: true,
-  filter: (src) => !src.includes(`${path.sep}data`),
+  filter: (src) => src !== dataDir && !src.startsWith(dataDir + path.sep),
 });
 await fsp.cp(path.join(root, 'dist'), path.join(out, 'dist'), { recursive: true });
 await fsp.cp(path.join(root, 'install'), path.join(out, 'install'), { recursive: true });

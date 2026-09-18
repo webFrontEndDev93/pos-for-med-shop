@@ -14,23 +14,30 @@ Write-Host '  Setting up MediPOS...' -ForegroundColor Cyan
 Write-Host ''
 
 # --- 1. Node -----------------------------------------------------------------
-$node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) {
-  Write-Host '  Node.js is not installed.' -ForegroundColor Yellow
-  Write-Host '  Install the LTS version from https://nodejs.org, then run this again.'
-  Write-Host ''
-  Start-Process 'https://nodejs.org'
-  Read-Host '  Press Enter to close'
-  exit 1
+# A bundled runtime means nothing to install and no internet needed.
+$Bundled = Join-Path $AppDir 'runtime\win-x64\node.exe'
+if (Test-Path $Bundled) {
+  Write-Host '  Node is bundled with MediPOS - nothing to install.' -ForegroundColor Green
 }
-$major = [int](& node -p 'process.versions.node.split(".")[0]')
-if ($major -lt 20) {
-  Write-Host "  MediPOS needs Node 20 or newer; this computer has $(& node -v)." -ForegroundColor Yellow
-  Write-Host '  Update it from https://nodejs.org, then run this again.'
-  Read-Host '  Press Enter to close'
-  exit 1
+else {
+  $node = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $node) {
+    Write-Host '  Node.js is not installed.' -ForegroundColor Yellow
+    Write-Host '  Install the LTS version from https://nodejs.org, then run this again.'
+    Write-Host ''
+    Start-Process 'https://nodejs.org'
+    Read-Host '  Press Enter to close'
+    exit 1
+  }
+  $major = [int](& node -p 'process.versions.node.split(".")[0]')
+  if ($major -lt 20) {
+    Write-Host "  MediPOS needs Node 20 or newer; this computer has $(& node -v)." -ForegroundColor Yellow
+    Write-Host '  Update it from https://nodejs.org, then run this again.'
+    Read-Host '  Press Enter to close'
+    exit 1
+  }
+  Write-Host "  Node $(& node -v) found." -ForegroundColor Green
 }
-Write-Host "  Node $(& node -v) found." -ForegroundColor Green
 
 # --- 2. Desktop shortcut -----------------------------------------------------
 $shell    = New-Object -ComObject WScript.Shell

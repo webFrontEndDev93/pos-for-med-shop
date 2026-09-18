@@ -9,7 +9,7 @@
 
 Option Explicit
 
-Dim fso, sh, appDir, port, url, i
+Dim fso, sh, appDir, port, url, i, nodeExe, bundled, command
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set sh  = CreateObject("WScript.Shell")
 
@@ -17,17 +17,33 @@ appDir = fso.GetParentFolderName(fso.GetParentFolderName(WScript.ScriptFullName)
 port   = 4173
 url    = "http://localhost:" & port
 
+' A Node runtime bundled into runtime\win-x64 is preferred over anything
+' installed on this computer, so the shop needs no install and no internet.
+' Chr(34) is a double quote — clearer than escaping quotes inside quotes.
+nodeExe = appDir & "\runtime\win-x64\node.exe"
+bundled = fso.FileExists(nodeExe)
+If bundled Then
+  command = Chr(34) & nodeExe & Chr(34) & " " & Chr(34) & appDir & "\server\index.mjs" & Chr(34)
+Else
+  command = "node " & Chr(34) & appDir & "\server\index.mjs" & Chr(34)
+End If
+
 ' Already running? Then just bring up the window — starting a second copy would
 ' only exit with "port already in use" anyway.
 If Not ServerUp() Then
   On Error Resume Next
   sh.CurrentDirectory = appDir
-  sh.Run "node """ & appDir & "\server\index.mjs""", 0, False
+  sh.Run command, 0, False
   If Err.Number <> 0 Then
     On Error GoTo 0
-    MsgBox "MediPOS needs Node.js, which does not seem to be installed." & vbCrLf & vbCrLf & _
-           "Install it once from https://nodejs.org (choose the LTS version)," & vbCrLf & _
-           "then open MediPOS again.", 48, "MediPOS"
+    If bundled Then
+      MsgBox "MediPOS could not start its own copy of Node." & vbCrLf & vbCrLf & _
+             "Antivirus may have blocked or removed this file:" & vbCrLf & nodeExe, 48, "MediPOS"
+    Else
+      MsgBox "MediPOS needs Node.js, which does not seem to be installed." & vbCrLf & vbCrLf & _
+             "Install it once from https://nodejs.org (choose the LTS version)," & vbCrLf & _
+             "then open MediPOS again.", 48, "MediPOS"
+    End If
     WScript.Quit 1
   End If
   On Error GoTo 0

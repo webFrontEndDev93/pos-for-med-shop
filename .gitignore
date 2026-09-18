@@ -5,6 +5,9 @@
 /dist/
 /medipos-shop/
 /medipos-shop.zip
+
+# Node runtimes downloaded to build a self-contained package
+/.node-cache/
 *.tsbuildinfo
 
 # Shop data — generated on first run, and never something to commit:

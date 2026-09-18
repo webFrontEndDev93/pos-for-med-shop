@@ -7,20 +7,20 @@ Two steps on the shop computer, then a desktop icon staff double-click.
 ```bash
 npm install
 npm run build
-npm run package
+npm run package -- --with-node=win-x64
 ```
 
-That produces **`medipos-shop.zip`** (~270 KB). That zip is the whole product:
-the server imports only Node built-ins, so the till needs no `node_modules` and
-no npm. Put it on a USB stick.
+That produces **`medipos-shop.zip`** (~34 MB) with an official Node runtime
+inside, so **the shop installs nothing and needs no internet**. The runtime is
+downloaded once, checksum-verified against nodejs.org's published
+`SHASUMS256.txt`, and cached in `.node-cache/` for later builds.
+
+Leave off `--with-node` for a ~270 KB package that relies on Node already being
+installed on the shop computer.
 
 ## What the shop does
 
-**Step 1 — install Node.js, once per computer.**
-<https://nodejs.org> → LTS version → click through the installer. Nothing to
-configure.
-
-**Step 2 — unzip the folder and run the setup file.**
+**Unzip the folder and run the setup file.** That is the whole install.
 
 | System | Double-click |
 | --- | --- |
@@ -28,8 +28,8 @@ configure.
 | Mac | `SETUP-Mac.command` |
 | Linux | `./SETUP-Linux.sh` |
 
-It checks Node, puts a **MediPOS icon on the desktop**, and asks whether to open
-the till automatically whenever the computer is switched on.
+It puts a **MediPOS icon on the desktop** and asks whether to open the till
+automatically whenever the computer is switched on.
 
 **That's it.** Double-clicking the icon starts the till if it isn't running and
 opens it in its own window — no terminal, no address bar, no tabs to get lost in.
@@ -42,6 +42,13 @@ optionally a counter person for staff.
 A `.bat` leaves a black console window on screen, which staff close — killing
 the till mid-queue. The `.vbs` launcher runs the server hidden and only ever
 shows the app window.
+
+### Which Node gets used
+
+The launcher prefers `runtime/win-x64/node.exe` from the package, and falls back
+to a system Node only if that is missing. A shop machine therefore never depends
+on what happens to be installed on it, and updating MediPOS cannot be broken by
+someone else upgrading or removing Node.
 
 ## Then: backups. Do not skip this.
 

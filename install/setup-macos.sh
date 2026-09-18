@@ -11,16 +11,19 @@ echo
 echo "  Setting up MediPOS..."
 echo
 
-if ! command -v node >/dev/null 2>&1; then
+BUNDLED="$(ls -d "$HERE/../runtime/"*/node 2>/dev/null | head -1 || true)"
+if [ -n "$BUNDLED" ] && [ -x "$BUNDLED" ]; then
+  echo "  Node is bundled with MediPOS - nothing to install."
+elif ! command -v node >/dev/null 2>&1; then
   echo "  Node.js is not installed."
   echo "  Install Node 20 or newer from https://nodejs.org, then run this again."
   exit 1
-fi
-if [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
+elif [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
   echo "  MediPOS needs Node 20 or newer; this Mac has $(node -v)."
   exit 1
+else
+  echo "  Node $(node -v) found."
 fi
-echo "  Node $(node -v) found."
 
 chmod +x "$HERE/medipos-launch.sh"
 

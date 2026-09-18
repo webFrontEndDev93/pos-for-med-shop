@@ -38,11 +38,12 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
 up on a real till: build, copy, start at boot, kiosk window, backups and the receipt
 printer, step by step.
 
-The short version: `npm run package` produces **`medipos-shop.zip`** (~270 KB). The
-shop installs Node once, double-clicks one `SETUP` file, and gets a **MediPOS icon on
-the desktop** that opens the till in its own window — no terminal, no address bar. The
-server imports only Node built-ins, so **the till needs no `node_modules` and no npm**;
-npm is a build tool here, not a runtime one.
+The short version: `npm run package -- --with-node=win-x64` produces
+**`medipos-shop.zip`** (~34 MB) with an official, checksum-verified Node runtime
+inside. The shop unzips it, double-clicks one `SETUP` file, and gets a **MediPOS icon
+on the desktop** that opens the till in its own window — **nothing to install, no
+internet, no terminal**. Drop `--with-node` for a ~270 KB package that uses a Node
+already on the machine.
 
 ## Running it for development
 
@@ -76,7 +77,7 @@ Open <http://localhost:5173>. Vite proxies `/api` through to the Node server.
 | `npm start` | Serve the built app and the API from one process |
 | `npm run seed` | Overwrite the database with fresh demo data |
 | `npm run typecheck` | TypeScript only, no build |
-| `npm run package` | Build `medipos-shop.zip`, the folder that goes on the shop computer |
+| `npm run package` | Build `medipos-shop.zip` for the shop (add `-- --with-node=win-x64` to bundle Node) |
 
 Set `PORT` to move the server, and `POS_DATA_DIR` to keep the data somewhere else
 (a synced folder, for example).

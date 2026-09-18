@@ -6,16 +6,8 @@ set -u
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-4173}"
 
-# A runtime bundled under runtime/<platform>/node wins over anything installed,
-# so a packaged shop needs no install and no internet.
+# Node is installed on this computer separately, never shipped with Dawakhana.
 NODE_BIN="node"
-case "$(uname -s)-$(uname -m)" in
-  Linux-x86_64)  CANDIDATE="$APP_DIR/runtime/linux-x64/node" ;;
-  Darwin-arm64)  CANDIDATE="$APP_DIR/runtime/darwin-arm64/node" ;;
-  Darwin-x86_64) CANDIDATE="$APP_DIR/runtime/darwin-x64/node" ;;
-  *)             CANDIDATE="" ;;
-esac
-if [ -n "$CANDIDATE" ] && [ -x "$CANDIDATE" ]; then NODE_BIN="$CANDIDATE"; fi
 URL="http://localhost:${PORT}"
 LOG="${APP_DIR}/server/data/dawakhana.log"
 
@@ -29,7 +21,7 @@ notify() {
   fi
 }
 
-if [ "$NODE_BIN" = "node" ] && ! command -v node >/dev/null 2>&1; then
+if ! command -v node >/dev/null 2>&1; then
   notify "Dawakhana needs Node.js, which is not installed. Install it once from https://nodejs.org, then open Dawakhana again."
   exit 1
 fi

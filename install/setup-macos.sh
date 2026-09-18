@@ -11,10 +11,8 @@ echo
 echo "  Setting up Dawakhana..."
 echo
 
-BUNDLED="$(ls -d "$HERE/../runtime/"*/node 2>/dev/null | head -1 || true)"
-if [ -n "$BUNDLED" ] && [ -x "$BUNDLED" ]; then
-  echo "  Node is bundled with Dawakhana - nothing to install."
-elif ! command -v node >/dev/null 2>&1; then
+# Node is installed on this computer separately, never shipped with Dawakhana.
+if ! command -v node >/dev/null 2>&1; then
   echo "  Node.js is not installed."
   echo "  Install Node 20 or newer from https://nodejs.org, then run this again."
   exit 1

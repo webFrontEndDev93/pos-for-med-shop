@@ -7,15 +7,13 @@
  *
  *   npm run build && npm run package
  *
- * Pass --with-node=win-x64 to embed an official Node runtime, so the shop
- * installs nothing at all. The binary is checksum-verified before it is copied
- * in; see scripts/fetch-node.mjs.
+ * Node is never bundled. It is installed on the shop computer once, separately,
+ * and the package stays small enough to send anywhere.
  */
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchNode, TARGETS, NODE_VERSION } from './fetch-node.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'dawakhana-shop');
@@ -40,18 +38,6 @@ await fsp.cp(path.join(root, 'server'), path.join(out, 'server'), {
 await fsp.cp(path.join(root, 'dist'), path.join(out, 'dist'), { recursive: true });
 await fsp.cp(path.join(root, 'install'), path.join(out, 'install'), { recursive: true });
 
-// Optionally embed a Node runtime so the shop needs no install and no internet.
-const requested = process.argv.find((a) => a.startsWith('--with-node'));
-let bundledFor = null;
-if (requested) {
-  const target = requested.includes('=') ? requested.split('=')[1] : 'win-x64';
-  const binary = await fetchNode(target);
-  const dest = path.join(out, 'runtime', target, path.basename(binary));
-  await fsp.mkdir(path.dirname(dest), { recursive: true });
-  await fsp.copyFile(binary, dest);
-  await fsp.chmod(dest, 0o755).catch(() => undefined);
-  bundledFor = target;
-}
 
 // One file to run on each platform, so nobody has to find a terminal.
 await fsp.writeFile(
@@ -73,42 +59,25 @@ await fsp.writeFile(
   { mode: 0o755 },
 );
 
-// Only promise "nothing to install" for the platform whose runtime is actually
-// in the box. Telling a Mac user they need nothing when they do is worse than
-// telling them nothing at all.
-const BUNDLE_PLATFORM = { 'win-x64': 'Windows', 'linux-x64': 'Linux', 'darwin-arm64': 'Mac', 'darwin-x64': 'Mac' };
-const bundledPlatform = bundledFor ? BUNDLE_PLATFORM[bundledFor] : null;
-
-const steps = bundledPlatform
-  ? [
-      `On ${bundledPlatform} this takes one step. Nothing to install, no internet needed.`,
-      ...(bundledPlatform === 'Windows'
-        ? ['On Mac or Linux you would need Node.js from https://nodejs.org first.']
-        : ['On other systems you would need Node.js from https://nodejs.org first.']),
-      '',
-      '',
-      'STEP 1 — Run the setup file for your computer',
-      '',
-    ]
-  : [
-      'Setting up a new shop computer takes two steps.',
-      '',
-      '',
-      'STEP 1 — Install Node.js (once per computer)',
-      '',
-      '  Go to  https://nodejs.org  and install the LTS version.',
-      '  Click Next through the installer; no settings need changing.',
-      '',
-      '',
-      'STEP 2 — Run the setup file for your computer',
-      '',
-    ];
+const steps = [
+  'Setting up a new shop computer takes two steps.',
+  '',
+  '',
+  'STEP 1 — Install Node.js (once per computer)',
+  '',
+  '  Go to  https://nodejs.org  and install the LTS version.',
+  '  Click Next through the installer; no settings need changing.',
+  '',
+  '',
+  'STEP 2 — Run the setup file for your computer',
+  '',
+];
 
 await fsp.writeFile(
   path.join(out, 'READ ME FIRST.txt'),
   [
     'Dawakhana',
-    '=======',
+    '=========',
     '',
     ...steps,
     '  Windows   double-click  SETUP-Windows.bat',
@@ -184,13 +153,9 @@ try {
 console.log(`\n  Packaged → ${out}`);
 const mb = bytes / 1024 / 1024;
 console.log(`  Size: ${mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`}`);
-console.log(bundledFor
-  ? `  Runtime: Node ${NODE_VERSION} for ${TARGETS[bundledFor].label} is included — the shop installs nothing.`
-  : '  Runtime: not included — the shop must install Node. Use --with-node=win-x64 to embed it.');
+console.log('  Node is not included — install it once on the shop computer.');
 if (archive) {
   const zipped = (await fsp.stat(archive)).size;
   console.log(`  Zipped → ${archive} (${Math.round(zipped / 1024)} KB)`);
 }
-console.log(bundledFor
-  ? '\n  Hand that to the shop. They unzip it and run the SETUP file. That is all.\n'
-  : '\n  Hand that to the shop. They install Node once, then run the SETUP file.\n');
+console.log('\n  Hand that to the shop. They install Node once, then run the SETUP file.\n');

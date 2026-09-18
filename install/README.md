@@ -7,16 +7,14 @@ Two steps on the shop computer, then a desktop icon staff double-click.
 ```bash
 npm install
 npm run build
-npm run package -- --with-node=win-x64
+npm run package
 ```
 
-That produces **`dawakhana-shop.zip`** (~34 MB) with an official Node runtime
-inside, so **the shop installs nothing and needs no internet**. The runtime is
-downloaded once, checksum-verified against nodejs.org's published
-`SHASUMS256.txt`, and cached in `.node-cache/` for later builds.
-
-Leave off `--with-node` for a ~270 KB package that relies on Node already being
-installed on the shop computer.
+That produces **`dawakhana-shop.zip`**, about 270 KB. Node is never bundled: it
+is installed on the shop computer once, separately, from nodejs.org. That keeps
+the package small enough to email or send over any connection, and keeps Node
+patching the shop's own business rather than something re-shipped with every
+update.
 
 ## What the shop does
 
@@ -45,10 +43,9 @@ shows the app window.
 
 ### Which Node gets used
 
-The launcher prefers `runtime/win-x64/node.exe` from the package, and falls back
-to a system Node only if that is missing. A shop machine therefore never depends
-on what happens to be installed on it, and updating Dawakhana cannot be broken by
-someone else upgrading or removing Node.
+Whatever `node` is on the computer's PATH. The setup script checks it is version
+20 or newer and refuses to continue otherwise, and the server checks again each
+time it starts, so a wrong version produces a clear message rather than a crash.
 
 ## Then: backups. Do not skip this.
 

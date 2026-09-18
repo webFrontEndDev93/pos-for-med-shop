@@ -38,12 +38,10 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
 up on a real till: build, copy, start at boot, kiosk window, backups and the receipt
 printer, step by step.
 
-The short version: `npm run package -- --with-node=win-x64` produces
-**`dawakhana-shop.zip`** (~34 MB) with an official, checksum-verified Node runtime
-inside. The shop unzips it, double-clicks one `SETUP` file, and gets a **Dawakhana icon
-on the desktop** that opens the till in its own window — **nothing to install, no
-internet, no terminal**. Drop `--with-node` for a ~270 KB package that uses a Node
-already on the machine.
+The short version: `npm run package` produces **`dawakhana-shop.zip`** (~270 KB).
+Node is installed on the shop computer once, separately; the shop then unzips the
+package, double-clicks one `SETUP` file, and gets a **Dawakhana icon on the desktop**
+that opens the till in its own window — no terminal, no address bar.
 
 ## Running it for development
 
@@ -85,7 +83,7 @@ Open <http://localhost:5173>. Vite proxies `/api` through to the Node server.
 | `npm run seed` | Overwrite the database with a fresh starter catalogue |
 | `npm run seed:demo` | Overwrite it with the invented demo shop instead |
 | `npm run typecheck` | TypeScript only, no build |
-| `npm run package` | Build `dawakhana-shop.zip` for the shop (add `-- --with-node=win-x64` to bundle Node) |
+| `npm run package` | Build `dawakhana-shop.zip` for the shop |
 
 Set `PORT` to move the server, and `POS_DATA_DIR` to keep the data somewhere else
 (a synced folder, for example).

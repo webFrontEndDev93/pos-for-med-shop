@@ -32,28 +32,71 @@ await fsp.cp(path.join(root, 'server'), path.join(out, 'server'), {
 await fsp.cp(path.join(root, 'dist'), path.join(out, 'dist'), { recursive: true });
 await fsp.cp(path.join(root, 'install'), path.join(out, 'install'), { recursive: true });
 
+// One file to run on each platform, so nobody has to find a terminal.
 await fsp.writeFile(
-  path.join(out, 'start.sh'),
-  '#!/bin/sh\ncd "$(dirname "$0")"\nexec node server/index.mjs\n',
+  path.join(out, 'SETUP-Windows.bat'),
+  [
+    '@echo off',
+    'REM Sets up MediPOS: checks Node, puts an icon on the desktop.',
+    'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\\setup-windows.ps1"',
+  ].join('\r\n') + '\r\n',
+);
+await fsp.writeFile(
+  path.join(out, 'SETUP-Mac.command'),
+  '#!/bin/sh\ncd "$(dirname "$0")"\nexec ./install/setup-macos.sh\n',
   { mode: 0o755 },
 );
 await fsp.writeFile(
-  path.join(out, 'start.bat'),
-  '@echo off\r\ncd /d "%~dp0"\r\nnode server\\index.mjs\r\npause\r\n',
+  path.join(out, 'SETUP-Linux.sh'),
+  '#!/bin/sh\ncd "$(dirname "$0")"\nexec ./install/setup-linux.sh\n',
+  { mode: 0o755 },
 );
+
 await fsp.writeFile(
-  path.join(out, 'README.txt'),
+  path.join(out, 'READ ME FIRST.txt'),
   [
-    'MediPOS — shop install',
+    'MediPOS',
+    '=======',
     '',
-    '1. Install Node 20 or newer from https://nodejs.org (one time).',
-    '2. Copy this whole folder onto the shop computer.',
-    '3. Double-click start.bat (Windows) or run ./start.sh (Mac/Linux).',
-    '4. Open http://localhost:4173 and set a passcode.',
+    'Setting up a new shop computer takes two steps.',
     '',
-    'To have it start by itself when the computer boots, see install/README.md.',
     '',
-    'Your data lives in server/data/db.json. Back it up — see Settings.',
+    'STEP 1 — Install Node.js (once per computer)',
+    '',
+    '  Go to  https://nodejs.org  and install the LTS version.',
+    '  Click Next through the installer; no settings need changing.',
+    '',
+    '',
+    'STEP 2 — Run the setup file for your computer',
+    '',
+    '  Windows   double-click  SETUP-Windows.bat',
+    '  Mac       double-click  SETUP-Mac.command',
+    '  Linux     run           ./SETUP-Linux.sh',
+    '',
+    '  It puts a MediPOS icon on the desktop and offers to start the till',
+    '  automatically whenever the computer is switched on.',
+    '',
+    '',
+    'THEN — day to day',
+    '',
+    '  Double-click the MediPOS icon on the desktop. The first time, it asks',
+    '  you to set up who works the till: your name and passcode as the owner,',
+    '  and optionally a counter person for your staff.',
+    '',
+    '',
+    'IMPORTANT — backups',
+    '',
+    '  Open Settings, scroll to Automatic backups, and set the folder to a USB',
+    '  stick or a synced folder (Google Drive, OneDrive, Dropbox).',
+    '',
+    '  Everything the shop knows lives in one file on this computer. If it is',
+    '  only ever backed up to the same computer, a theft or a dead hard disk',
+    '  takes the shop records with it.',
+    '',
+    '',
+    'If something goes wrong, the shop records are safe in:',
+    '  server/data/db.json',
+    '',
   ].join('\n'),
 );
 
@@ -67,5 +110,24 @@ async function size(dir) {
   return total;
 }
 
+const bytes = await size(out);
+
+// Zip it so the whole thing can be handed over as one file. Falls back to the
+// plain folder on a machine with no zip command.
+let archive = null;
+try {
+  const { execFileSync } = await import('node:child_process');
+  archive = `${out}.zip`;
+  await fsp.rm(archive, { force: true });
+  execFileSync('zip', ['-rq', archive, path.basename(out)], { cwd: root });
+} catch {
+  archive = null;
+}
+
 console.log(`\n  Packaged → ${out}`);
-console.log(`  Size: ${Math.round((await size(out)) / 1024)} KB (no node_modules needed)\n`);
+console.log(`  Size: ${Math.round(bytes / 1024)} KB (no node_modules needed)`);
+if (archive) {
+  const zipped = (await fsp.stat(archive)).size;
+  console.log(`  Zipped → ${archive} (${Math.round(zipped / 1024)} KB)`);
+}
+console.log('\n  Hand that to the shop. They install Node once, then run the SETUP file.\n');

@@ -1,11 +1,8 @@
-# Putting MediPOS on a shop computer
+# Putting MediPOS in a shop
 
-MediPOS runs on the shop's own machine. It needs **Node 20 or newer** and nothing
-else — no database, no internet, no `node_modules` on the till.
+Two steps on the shop computer, then a desktop icon staff double-click.
 
-## 1. Build the shop folder
-
-On your own machine, from the project:
+## What you do, once, on your own machine
 
 ```bash
 npm install
@@ -13,99 +10,96 @@ npm run build
 npm run package
 ```
 
-That produces `medipos-shop/` — about **440 KB**. Copy that folder to the shop
-computer (USB stick is fine).
+That produces **`medipos-shop.zip`** (~270 KB). That zip is the whole product:
+the server imports only Node built-ins, so the till needs no `node_modules` and
+no npm. Put it on a USB stick.
 
-## 2. Install Node on the shop computer
+## What the shop does
 
-Download the LTS installer from <https://nodejs.org> and run it. One time only.
+**Step 1 — install Node.js, once per computer.**
+<https://nodejs.org> → LTS version → click through the installer. Nothing to
+configure.
 
-## 3. Start it
+**Step 2 — unzip the folder and run the setup file.**
 
-| System | How |
+| System | Double-click |
 | --- | --- |
-| Windows | Double-click `start.bat` |
-| macOS / Linux | `./start.sh` |
+| Windows | `SETUP-Windows.bat` |
+| Mac | `SETUP-Mac.command` |
+| Linux | `./SETUP-Linux.sh` |
 
-Then open <http://localhost:4173>. The first screen sets up the people on the till:
+It checks Node, puts a **MediPOS icon on the desktop**, and asks whether to open
+the till automatically whenever the computer is switched on.
 
-- **you**, the owner — your name and your own passcode, which unlocks everything;
-- optionally a **counter** person, who bills and looks up stock but cannot cancel
-  bills, see takings, change prices or open Settings.
+**That's it.** Double-clicking the icon starts the till if it isn't running and
+opens it in its own window — no terminal, no address bar, no tabs to get lost in.
 
-Everyone gets their own passcode, because that is how a bill records who rang it up.
-Add the rest of your staff in Settings → People on the till. When someone on the
-counter needs something owner-only, MediPOS asks for an owner passcode on the spot, so
-you approve it without anyone signing out.
+The first time, it asks who works the till: the owner's name and passcode, and
+optionally a counter person for staff.
 
-## 4. Make it start by itself
+### Why a `.vbs` on Windows
 
-So nobody has to open a terminal each morning:
+A `.bat` leaves a black console window on screen, which staff close — killing
+the till mid-queue. The `.vbs` launcher runs the server hidden and only ever
+shows the app window.
 
-| System | Command |
-| --- | --- |
-| Linux | `sudo ./install/install-linux.sh` |
-| macOS | `./install/install-macos.sh` |
-| Windows | Right-click `install\install-windows.ps1` → Run with PowerShell |
+## Then: backups. Do not skip this.
 
-Each one registers MediPOS to start at boot or login and to **restart itself if it
-crashes or the power cuts out**.
+**Settings → Automatic backups → Backup folder.** Point it at a **USB stick or a
+synced folder** (Google Drive, OneDrive, Dropbox).
 
-## 5. Make it open like a till
+Everything the shop knows is one file on one computer. Backing it up to the same
+computer is not a backup: the realistic disaster is that machine being stolen,
+dropped or dying, and taking both copies with it.
 
-Put a desktop shortcut to `install/kiosk-windows.bat` (or `kiosk-linux.sh`) on the
-counter machine. It opens MediPOS in its own window with no address bar or tabs, so
-staff can't wander off into a browser.
+Check the folder shows recent backups with sensible sizes. If the drive is
+unplugged, Settings says so and the shop keeps trading — a missing backup drive
+never stops a sale.
 
-## 6. Set up backups — do not skip this
-
-Settings → Automatic backups. A copy is written every time MediPOS starts and then on
-a schedule.
-
-**Point the backup folder at a USB stick or a synced folder** (Dropbox, Google Drive,
-OneDrive). A backup that only exists on the till is no backup at all: the realistic
-disaster is the laptop being stolen, dropped or dying, and taking both copies with it.
-
-Check the folder path in Settings shows recent backups with sensible sizes. If the
-drive is unplugged, MediPOS says so there and keeps trading — a missing backup drive
-never stops you selling.
-
-## 7. Receipt printer
+## Receipt printer
 
 Receipts print through the browser's print dialog, laid out for **80 mm thermal
-paper**. Install the printer in the operating system as usual, then:
+paper**.
 
-- Set it as the default printer.
-- In the browser's print dialog set paper to 80 mm roll and margins to **None**.
-- Print a test bill and check nothing is cut off at the right edge.
+1. Install the printer in Windows/macOS as usual and set it as the default.
+2. Ring up a test bill and press Print.
+3. In the print dialog set paper to the 80 mm roll and margins to **None**.
+4. Check nothing is clipped on the right edge.
 
-## Day-to-day
+## Day to day
 
 | Thing | Where |
 | --- | --- |
-| Data file | `server/data/db.json` |
+| Shop records | `server/data/db.json` |
 | Backups | The folder set in Settings |
-| Passcodes | `server/data/auth.json` — delete it and restart to set new ones |
-| Logs (Linux) | `/var/log/medipos.log` |
-| Logs (macOS) | `~/Library/Logs/medipos.log` |
+| Passcodes | `server/data/auth.json` — delete it and restart to start again |
+| Log | `server/data/medipos.log` |
 | Change port | `PORT=4174` before starting |
-| Turn off the passcode | `POS_AUTH=off` before starting |
+| Turn the passcode off | `POS_AUTH=off` before starting |
 
-## Using it from a second device
+The till keeps running in the background after the window is closed, so
+reopening it is instant. Restarting the computer stops it.
+
+### Running it properly as a service
+
+The desktop icon is enough for a beta. For a permanent install that restarts
+itself after a crash or a power cut, there are service installers:
+
+```bash
+sudo ./install/service-linux.sh     # systemd, Restart=always
+./install/service-macos.sh          # launchd, KeepAlive
+```
+
+On Windows, the setup script's "start automatically" option covers this.
+
+## A second device
 
 MediPOS listens on the whole network, so a phone or tablet on the same Wi-Fi can
-reach it at `http://<the computer's IP>:4173`. The passcode is the only thing
-protecting it, so:
+reach it at `http://<the computer's IP>:4173`. Passcodes are the only thing in
+the way — use `HOST=127.0.0.1` to bind to the machine alone.
 
-- Use a passcode you would be happy defending, not `1234`.
-- On an untrusted network, bind it to the machine only: `HOST=127.0.0.1`.
-
-Give each person their own passcode and never share one: bills record who rang them
-up, and two people on one code would make that meaningless. Settings → Activity shows
-cancelled bills, price changes and the rest, with the name against each.
-
-## Updating
+## Updating the shop later
 
 Rebuild and re-package on your machine, then copy the new `server/` and `dist/`
 folders over the old ones. **Leave `server/data/` alone** — that is the shop's
-records. Restart MediPOS afterwards.
+records. Close and reopen MediPOS afterwards.

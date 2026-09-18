@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Starts MediPOS if it is not already running, then opens it in its own window.
+# Used by the desktop shortcut on Linux and by the macOS app bundle.
+set -u
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PORT="${PORT:-4173}"
+URL="http://localhost:${PORT}"
+LOG="${APP_DIR}/server/data/medipos.log"
+
+up() { curl -fsS --max-time 2 "${URL}/api/health" >/dev/null 2>&1; }
+
+notify() {
+  # Whatever this desktop has: a dialog, a notification, or just the terminal.
+  if command -v zenity >/dev/null 2>&1; then zenity --error --title=MediPOS --text="$1" 2>/dev/null
+  elif command -v osascript >/dev/null 2>&1; then osascript -e "display alert \"MediPOS\" message \"$1\"" >/dev/null 2>&1
+  else echo "$1" >&2
+  fi
+}
+
+if ! command -v node >/dev/null 2>&1; then
+  notify "MediPOS needs Node.js, which is not installed. Install it once from https://nodejs.org, then open MediPOS again."
+  exit 1
+fi
+
+if ! up; then
+  mkdir -p "${APP_DIR}/server/data"
+  ( cd "$APP_DIR" && nohup node server/index.mjs >>"$LOG" 2>&1 & ) >/dev/null 2>&1
+  # Up to 30s — the first start also seeds the demo shop.
+  for _ in $(seq 1 60); do
+    sleep 0.5
+    up && break
+  done
+fi
+
+if ! up; then
+  notify "MediPOS did not start. See ${LOG}. The shop's records are safe in ${APP_DIR}/server/data."
+  exit 1
+fi
+
+# App mode: no tabs, no address bar — it looks like a till, not a browser.
+for browser in google-chrome chromium chromium-browser brave-browser microsoft-edge; do
+  if command -v "$browser" >/dev/null 2>&1; then
+    exec "$browser" --app="$URL" --start-maximized
+  fi
+done
+
+if command -v open >/dev/null 2>&1; then
+  for app in "Google Chrome" "Microsoft Edge"; do
+    if [ -d "/Applications/${app}.app" ]; then
+      exec open -na "$app" --args --app="$URL" --start-maximized
+    fi
+  done
+  exec open "$URL"
+fi
+
+exec xdg-open "$URL"

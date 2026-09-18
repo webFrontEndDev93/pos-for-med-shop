@@ -33,6 +33,10 @@ End If
 If Not ServerUp() Then
   On Error Resume Next
   sh.CurrentDirectory = appDir
+  ' Clear first: if setting the working directory above failed, that stale error
+  ' would otherwise be read below as "Node could not start" and show the wrong
+  ' dialog to the shopkeeper.
+  Err.Clear
   sh.Run command, 0, False
   If Err.Number <> 0 Then
     On Error GoTo 0

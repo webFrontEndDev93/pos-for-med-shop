@@ -29,14 +29,27 @@ else {
     Read-Host '  Press Enter to close'
     exit 1
   }
-  $major = [int](& node -p 'process.versions.node.split(".")[0]')
-  if ($major -lt 20) {
-    Write-Host "  MediPOS needs Node 20 or newer; this computer has $(& node -v)." -ForegroundColor Yellow
+  # Read the version with a bare flag and split it here. Passing a JS snippet
+  # like 'x.split(".")[0]' does not survive: PowerShell strips the inner quotes
+  # on its way to a native command, so node receives split(.) and dies — which
+  # then read as "your Node is too old" for a perfectly good Node.
+  $reported = (& node -v) 2>$null
+  $major = 0
+  if ($reported -match '^v?(\d+)\.') { $major = [int]$Matches[1] }
+
+  if ($major -gt 0 -and $major -lt 20) {
+    Write-Host "  MediPOS needs Node 20 or newer; this computer has $reported." -ForegroundColor Yellow
     Write-Host '  Update it from https://nodejs.org, then run this again.'
     Read-Host '  Press Enter to close'
     exit 1
   }
-  Write-Host "  Node $(& node -v) found." -ForegroundColor Green
+  if ($major -eq 0) {
+    # Could not read it; the server checks again at startup and says so clearly.
+    Write-Host '  Node found (version could not be read).' -ForegroundColor Green
+  }
+  else {
+    Write-Host "  Node $reported found." -ForegroundColor Green
+  }
 }
 
 # --- 2. Desktop shortcut -----------------------------------------------------

@@ -71,7 +71,7 @@ export function Lock({
       <form className="lock-card" onSubmit={submit}>
         <div className="lock-mark"><Icon name="pill" size={24} strokeWidth={2} /></div>
 
-        <h1 className="lock-title">{setup ? 'Set up the till' : 'MediPOS'}</h1>
+        <h1 className="lock-title">{setup ? 'Set up the till' : 'Dawakhana'}</h1>
         <p className="lock-sub">
           {setup
             ? `Your own name and passcode. Every bill records who rang it up, so each person on the till needs their own — at least ${minLength} characters.`
@@ -170,7 +170,7 @@ export function Lock({
         <p className="lock-foot">
           {setup
             ? 'Write your passcode somewhere safe. There is no way to recover it — you would have to delete server/data/auth.json and start again.'
-            : 'Forgot it? Delete server/data/auth.json on this computer and restart MediPOS to set a new one.'}
+            : 'Forgot it? Delete server/data/auth.json on this computer and restart Dawakhana to set a new one.'}
         </p>
       </form>
     </div>

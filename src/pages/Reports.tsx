@@ -129,7 +129,7 @@ export function Reports() {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `medipos-sales-${range.from}-to-${range.to}.csv`;
+    link.download = `dawakhana-sales-${range.from}-to-${range.to}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     notify('success', 'Exported', `${filteredSales.length} bills written to CSV.`);

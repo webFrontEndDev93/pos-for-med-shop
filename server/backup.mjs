@@ -17,7 +17,21 @@ import { DATA_DIR, readDb } from './db.mjs';
 
 const DEFAULT_DIR = path.join(DATA_DIR, 'backups');
 const TICK_MS = 5 * 60 * 1000;
-const PREFIX = 'medipos-';
+const PREFIX = 'dawakhana-';
+
+// Backups written before the product was renamed. They are still ours, so they
+// must stay listed and stay subject to pruning — otherwise a shop that has been
+// running a while keeps every pre-rename file for ever.
+const LEGACY_PREFIXES = ['medipos-'];
+const ALL_PREFIXES = [PREFIX, ...LEGACY_PREFIXES];
+
+const isBackup = (name) => name.endsWith('.json') && ALL_PREFIXES.some((p) => name.startsWith(p));
+
+// Sort on the timestamp, never the whole filename: 'dawakhana-' sorts before
+// 'medipos-' whatever the dates say, which would have pruning delete the newest
+// backups and keep the oldest.
+const stampOf = (name) => name.slice((ALL_PREFIXES.find((p) => name.startsWith(p)) ?? '').length);
+const byStamp = (a, b) => stampOf(a).localeCompare(stampOf(b));
 
 // A half-disconnected USB stick or an unreachable network share makes fs calls
 // hang rather than fail, which would otherwise freeze the request — and, on the
@@ -85,9 +99,7 @@ export async function runBackup(reason = 'manual') {
 
 /** Deletes all but the newest `keep` backups. Only touches files we wrote. */
 async function prune(folder, keep) {
-  const entries = (await fsp.readdir(folder))
-    .filter((name) => name.startsWith(PREFIX) && name.endsWith('.json'))
-    .sort();
+  const entries = (await fsp.readdir(folder)).filter(isBackup).sort(byStamp);
   const excess = entries.slice(0, Math.max(0, entries.length - keep));
   for (const name of excess) {
     await fsp.unlink(path.join(folder, name)).catch(() => undefined);
@@ -100,8 +112,8 @@ export async function listBackups() {
   const folder = backupFolder(db.settings);
   try {
     const names = (await withTimeout(fsp.readdir(folder), 'Reading the backup folder'))
-      .filter((name) => name.startsWith(PREFIX) && name.endsWith('.json'))
-      .sort()
+      .filter(isBackup)
+      .sort(byStamp)
       .reverse()
       .slice(0, 30);
 

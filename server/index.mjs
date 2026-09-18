@@ -89,10 +89,10 @@ async function serveStatic(req, res, pathname) {
   if (!fs.existsSync(DIST)) {
     res.writeHead(503, { 'content-type': 'text/html; charset=utf-8' });
     res.end(
-      `<!doctype html><meta charset="utf-8"><title>MediPOS</title>
+      `<!doctype html><meta charset="utf-8"><title>Dawakhana</title>
        <style>body{font:16px/1.6 system-ui,sans-serif;margin:0;display:grid;place-items:center;height:100vh;background:#0b1120;color:#e2e8f0}
        div{max-width:34rem;padding:2rem}code{background:#1e293b;padding:.15rem .4rem;border-radius:.3rem}</style>
-       <div><h1>MediPOS is not built yet</h1>
+       <div><h1>Dawakhana is not built yet</h1>
        <p>Run <code>npm run build</code> to produce the app, or <code>npm run dev</code> for the dev server with hot reload.</p></div>`,
     );
     return;
@@ -292,7 +292,7 @@ const server = http.createServer(async (req, res) => {
   let session = null;
   if (authEnabled() && pathname !== '/api/health') {
     if (!isConfigured()) {
-      send(res, 401, { error: 'Set a passcode before using MediPOS.', code: 'setup_required' });
+      send(res, 401, { error: 'Set a passcode before using Dawakhana.', code: 'setup_required' });
       return;
     }
     session = getSession(readCookie(req.headers.cookie, COOKIE));
@@ -328,7 +328,7 @@ const server = http.createServer(async (req, res) => {
     });
     const download = pathname === '/api/backup' && req.method === 'GET';
     send(res, 200, result, download
-      ? { 'content-disposition': `attachment; filename="medipos-backup-${new Date().toISOString().slice(0, 10)}.json"` }
+      ? { 'content-disposition': `attachment; filename="dawakhana-backup-${new Date().toISOString().slice(0, 10)}.json"` }
       : {});
   } catch (err) {
     if (err instanceof HttpError) {
@@ -347,22 +347,22 @@ const server = http.createServer(async (req, res) => {
 const MIN_NODE_MAJOR = 20;
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 if (nodeMajor < MIN_NODE_MAJOR) {
-  console.error(`\n  MediPOS needs Node ${MIN_NODE_MAJOR} or newer.`);
+  console.error(`\n  Dawakhana needs Node ${MIN_NODE_MAJOR} or newer.`);
   console.error(`  This computer has Node ${process.versions.node}.`);
-  console.error('  Install the current LTS from https://nodejs.org and start MediPOS again.\n');
+  console.error('  Install the current LTS from https://nodejs.org and start Dawakhana again.\n');
   process.exit(1);
 }
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n  Port ${PORT} is already being used on this computer.`);
-    console.error('  MediPOS is probably already running — check your browser first.');
+    console.error('  Dawakhana is probably already running — check your browser first.');
     console.error(`  To run a second copy on another port:  PORT=4174 npm start\n`);
   } else if (err.code === 'EACCES') {
     console.error(`\n  Not allowed to use port ${PORT}.`);
     console.error('  Ports below 1024 need administrator rights. Try PORT=4173 npm start\n');
   } else {
-    console.error('\n  MediPOS could not start.');
+    console.error('\n  Dawakhana could not start.');
     console.error(`  ${err.message}\n`);
   }
   process.exit(1);
@@ -371,7 +371,7 @@ server.on('error', (err) => {
 try {
   await ensureSeed();
 } catch (err) {
-  console.error('\n  MediPOS could not open its data file.');
+  console.error('\n  Dawakhana could not open its data file.');
   console.error(`  ${DB_FILE}`);
   console.error(`  ${err.message}`);
   console.error('  Check the folder exists and that this user can write to it.\n');
@@ -380,7 +380,7 @@ try {
 
 server.listen(PORT, HOST, () => {
   const shown = HOST === '0.0.0.0' ? 'localhost' : HOST;
-  console.log(`\n  MediPOS server running\n`);
+  console.log(`\n  Dawakhana server running\n`);
   console.log(`  ➜  App:   http://${shown}:${PORT}`);
   console.log(`  ➜  API:   http://${shown}:${PORT}/api/health`);
   console.log(`  ➜  Data:  ${DB_FILE}`);
@@ -395,7 +395,7 @@ server.listen(PORT, HOST, () => {
 for (const fatal of ['uncaughtException', 'unhandledRejection']) {
   process.on(fatal, (err) => {
     console.error(`\n[fatal] ${fatal}:`, err);
-    console.error('[fatal] Shutting down; the service manager should restart MediPOS.\n');
+    console.error('[fatal] Shutting down; the service manager should restart Dawakhana.\n');
     process.exit(1);
   });
 }

@@ -1,9 +1,9 @@
 {
-  "name": "pos-for-med-shop",
+  "name": "dawakhana",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "MediPOS \u2014 a lightweight, offline-first point of sale for medicine shops.",
+  "description": "Dawakhana \u2014 a lightweight, offline-first point of sale for medicine shops.",
   "engines": {
     "node": ">=20"
   },

@@ -1,4 +1,4 @@
-# Putting MediPOS in a shop
+# Putting Dawakhana in a shop
 
 Two steps on the shop computer, then a desktop icon staff double-click.
 
@@ -10,7 +10,7 @@ npm run build
 npm run package -- --with-node=win-x64
 ```
 
-That produces **`medipos-shop.zip`** (~34 MB) with an official Node runtime
+That produces **`dawakhana-shop.zip`** (~34 MB) with an official Node runtime
 inside, so **the shop installs nothing and needs no internet**. The runtime is
 downloaded once, checksum-verified against nodejs.org's published
 `SHASUMS256.txt`, and cached in `.node-cache/` for later builds.
@@ -28,7 +28,7 @@ installed on the shop computer.
 | Mac | `SETUP-Mac.command` |
 | Linux | `./SETUP-Linux.sh` |
 
-It puts a **MediPOS icon on the desktop** and asks whether to open the till
+It puts a **Dawakhana icon on the desktop** and asks whether to open the till
 automatically whenever the computer is switched on.
 
 **That's it.** Double-clicking the icon starts the till if it isn't running and
@@ -47,7 +47,7 @@ shows the app window.
 
 The launcher prefers `runtime/win-x64/node.exe` from the package, and falls back
 to a system Node only if that is missing. A shop machine therefore never depends
-on what happens to be installed on it, and updating MediPOS cannot be broken by
+on what happens to be installed on it, and updating Dawakhana cannot be broken by
 someone else upgrading or removing Node.
 
 ## Then: backups. Do not skip this.
@@ -80,7 +80,7 @@ paper**.
 | Shop records | `server/data/db.json` |
 | Backups | The folder set in Settings |
 | Passcodes | `server/data/auth.json` — delete it and restart to start again |
-| Log | `server/data/medipos.log` |
+| Log | `server/data/dawakhana.log` |
 | Change port | `PORT=4174` before starting |
 | Turn the passcode off | `POS_AUTH=off` before starting |
 
@@ -101,7 +101,7 @@ On Windows, the setup script's "start automatically" option covers this.
 
 ## A second device
 
-MediPOS listens on the whole network, so a phone or tablet on the same Wi-Fi can
+Dawakhana listens on the whole network, so a phone or tablet on the same Wi-Fi can
 reach it at `http://<the computer's IP>:4173`. Passcodes are the only thing in
 the way — use `HOST=127.0.0.1` to bind to the machine alone.
 
@@ -109,4 +109,4 @@ the way — use `HOST=127.0.0.1` to bind to the machine alone.
 
 Rebuild and re-package on your machine, then copy the new `server/` and `dist/`
 folders over the old ones. **Leave `server/data/` alone** — that is the shop's
-records. Close and reopen MediPOS afterwards.
+records. Close and reopen Dawakhana afterwards.

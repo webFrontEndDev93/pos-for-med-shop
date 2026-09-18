@@ -1,23 +1,23 @@
-# Sets MediPOS up on a Windows shop computer: checks Node, puts a MediPOS icon
+# Sets Dawakhana up on a Windows shop computer: checks Node, puts a Dawakhana icon
 # on the desktop, and offers to start it automatically when Windows starts.
 #
 #   Right-click this file -> "Run with PowerShell"
 $ErrorActionPreference = 'Stop'
 
 $AppDir   = Split-Path -Parent $PSScriptRoot
-$Launcher = Join-Path $PSScriptRoot 'MediPOS.vbs'
-$IconPath = Join-Path $PSScriptRoot 'MediPOS.ico'
+$Launcher = Join-Path $PSScriptRoot 'Dawakhana.vbs'
+$IconPath = Join-Path $PSScriptRoot 'Dawakhana.ico'
 $Desktop  = [Environment]::GetFolderPath('Desktop')
 
 Write-Host ''
-Write-Host '  Setting up MediPOS...' -ForegroundColor Cyan
+Write-Host '  Setting up Dawakhana...' -ForegroundColor Cyan
 Write-Host ''
 
 # --- 1. Node -----------------------------------------------------------------
 # A bundled runtime means nothing to install and no internet needed.
 $Bundled = Join-Path $AppDir 'runtime\win-x64\node.exe'
 if (Test-Path $Bundled) {
-  Write-Host '  Node is bundled with MediPOS - nothing to install.' -ForegroundColor Green
+  Write-Host '  Node is bundled with Dawakhana - nothing to install.' -ForegroundColor Green
 }
 else {
   $node = Get-Command node -ErrorAction SilentlyContinue
@@ -38,7 +38,7 @@ else {
   if ($reported -match '^v?(\d+)\.') { $major = [int]$Matches[1] }
 
   if ($major -gt 0 -and $major -lt 20) {
-    Write-Host "  MediPOS needs Node 20 or newer; this computer has $reported." -ForegroundColor Yellow
+    Write-Host "  Dawakhana needs Node 20 or newer; this computer has $reported." -ForegroundColor Yellow
     Write-Host '  Update it from https://nodejs.org, then run this again.'
     Read-Host '  Press Enter to close'
     exit 1
@@ -54,26 +54,26 @@ else {
 
 # --- 2. Desktop shortcut -----------------------------------------------------
 $shell    = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut((Join-Path $Desktop 'MediPOS.lnk'))
+$shortcut = $shell.CreateShortcut((Join-Path $Desktop 'Dawakhana.lnk'))
 $shortcut.TargetPath       = 'wscript.exe'
 $shortcut.Arguments        = """$Launcher"""
 $shortcut.WorkingDirectory = $AppDir
 $shortcut.IconLocation     = $IconPath
-$shortcut.Description      = 'Open the MediPOS till'
+$shortcut.Description      = 'Open the Dawakhana till'
 $shortcut.Save()
-Write-Host '  Put a MediPOS icon on the desktop.' -ForegroundColor Green
+Write-Host '  Put a Dawakhana icon on the desktop.' -ForegroundColor Green
 
 # Pin it to the Start menu too, so it survives a tidied desktop.
 $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-Copy-Item (Join-Path $Desktop 'MediPOS.lnk') (Join-Path $startMenu 'MediPOS.lnk') -Force
+Copy-Item (Join-Path $Desktop 'Dawakhana.lnk') (Join-Path $startMenu 'Dawakhana.lnk') -Force
 Write-Host '  Added it to the Start menu.' -ForegroundColor Green
 
 # --- 3. Start with Windows (optional) ---------------------------------------
 Write-Host ''
-$auto = Read-Host '  Start MediPOS automatically when this computer turns on? (Y/n)'
+$auto = Read-Host '  Start Dawakhana automatically when this computer turns on? (Y/n)'
 if ($auto -eq '' -or $auto -match '^[Yy]') {
   $startup = [Environment]::GetFolderPath('Startup')
-  $boot = $shell.CreateShortcut((Join-Path $startup 'MediPOS.lnk'))
+  $boot = $shell.CreateShortcut((Join-Path $startup 'Dawakhana.lnk'))
   $boot.TargetPath       = 'wscript.exe'
   $boot.Arguments        = """$Launcher"""
   $boot.WorkingDirectory = $AppDir
@@ -85,6 +85,6 @@ if ($auto -eq '' -or $auto -match '^[Yy]') {
 }
 
 Write-Host ''
-Write-Host '  Done. Double-click the MediPOS icon on the desktop.' -ForegroundColor Cyan
+Write-Host '  Done. Double-click the Dawakhana icon on the desktop.' -ForegroundColor Cyan
 Write-Host ''
 Read-Host '  Press Enter to close'

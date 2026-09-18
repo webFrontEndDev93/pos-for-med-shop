@@ -25,7 +25,7 @@ export default function App() {
   const { ready, loadError, reload, settings, lock, minPasscodeLength, unlock, isAdmin } = useStore();
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem('medipos.sidebar') === 'collapsed',
+    () => localStorage.getItem('dawakhana.sidebar') === 'collapsed',
   );
   const [clock, setClock] = useState(() => new Date());
   const [gateFor, setGateFor] = useState<Route | null>(null);
@@ -47,7 +47,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('medipos.sidebar', collapsed ? 'collapsed' : 'expanded');
+    localStorage.setItem('dawakhana.sidebar', collapsed ? 'collapsed' : 'expanded');
   }, [collapsed]);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function App() {
   }, [navigate]);
 
   useEffect(() => {
-    document.title = `${ROUTE_TITLES[route]} · ${settings.shopName || 'MediPOS'}`;
+    document.title = `${ROUTE_TITLES[route]} · ${settings.shopName || 'Dawakhana'}`;
   }, [route, settings.shopName]);
 
   if (!ready) {

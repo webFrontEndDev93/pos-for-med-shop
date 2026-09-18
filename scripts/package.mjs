@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { fetchNode, TARGETS, NODE_VERSION } from './fetch-node.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const out = path.join(root, 'medipos-shop');
+const out = path.join(root, 'dawakhana-shop');
 
 if (!fs.existsSync(path.join(root, 'dist', 'index.html'))) {
   console.error('\n  No build found. Run "npm run build" first.\n');
@@ -58,7 +58,7 @@ await fsp.writeFile(
   path.join(out, 'SETUP-Windows.bat'),
   [
     '@echo off',
-    'REM Sets up MediPOS: checks Node, puts an icon on the desktop.',
+    'REM Sets up Dawakhana: checks Node, puts an icon on the desktop.',
     'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install\\setup-windows.ps1"',
   ].join('\r\n') + '\r\n',
 );
@@ -107,7 +107,7 @@ const steps = bundledPlatform
 await fsp.writeFile(
   path.join(out, 'READ ME FIRST.txt'),
   [
-    'MediPOS',
+    'Dawakhana',
     '=======',
     '',
     ...steps,
@@ -115,20 +115,20 @@ await fsp.writeFile(
     '  Mac       double-click  SETUP-Mac.command',
     '  Linux     run           ./SETUP-Linux.sh',
     '',
-    '  It puts a MediPOS icon on the desktop and offers to start the till',
+    '  It puts a Dawakhana icon on the desktop and offers to start the till',
     '  automatically whenever the computer is switched on.',
     '',
     '',
     'THEN — day to day',
     '',
-    '  Double-click the MediPOS icon on the desktop. The first time, it asks',
+    '  Double-click the Dawakhana icon on the desktop. The first time, it asks',
     '  you to set up who works the till: your name and passcode as the owner,',
     '  and optionally a counter person for your staff.',
     '',
     '',
     'FIRST — put your stock in',
     '',
-    '  MediPOS starts with about 50 common medicines already listed, so you are',
+    '  Dawakhana starts with about 50 common medicines already listed, so you are',
     '  not typing into an empty screen. Each one has a price but no stock, and',
     '  its batch is marked OPENING.',
     '',

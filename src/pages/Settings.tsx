@@ -101,7 +101,7 @@ export function SettingsPage() {
       );
       const link = document.createElement('a');
       link.href = url;
-      link.download = `medipos-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `dawakhana-backup-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
       notify('success', 'Backup downloaded', 'Keep a copy somewhere off this machine.');
@@ -118,7 +118,7 @@ export function SettingsPage() {
       try {
         setRestoring(JSON.parse(String(reader.result)));
       } catch {
-        notify('error', 'That file is not readable', 'Pick a MediPOS backup saved from this screen.');
+        notify('error', 'That file is not readable', 'Pick a Dawakhana backup saved from this screen.');
       }
     };
     reader.readAsText(file);
@@ -409,7 +409,7 @@ export function SettingsPage() {
             <div className="setting-row" style={{ paddingTop: 0 }}>
               <div>
                 <div className="setting-name">Back up automatically</div>
-                <div className="setting-desc">Runs when MediPOS starts, then on the schedule below.</div>
+                <div className="setting-desc">Runs when Dawakhana starts, then on the schedule below.</div>
               </div>
               <Switch
                 checked={draft.backupEnabled !== false}
@@ -440,7 +440,7 @@ export function SettingsPage() {
                 >
                   <input
                     className="input mono"
-                    placeholder="/media/usb/medipos  or  D:\\medipos-backups"
+                    placeholder="/media/usb/dawakhana  or  D:\\dawakhana-backups"
                     value={draft.backupFolder ?? ''}
                     onChange={(e) => set('backupFolder', e.target.value)}
                   />
@@ -462,7 +462,7 @@ export function SettingsPage() {
                 </p>
               ) : backups.files.length === 0 ? (
                 <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>
-                  No backups yet. One is written each time MediPOS starts.
+                  No backups yet. One is written each time Dawakhana starts.
                 </p>
               ) : (
                 <div style={{ maxHeight: '14rem', overflowY: 'auto' }}>
@@ -558,7 +558,7 @@ export function SettingsPage() {
               <div>
                 <div className="setting-name">Sign out</div>
                 <div className="setting-desc">
-                  Locks the counter without stopping MediPOS. You are signed in as{' '}
+                  Locks the counter without stopping Dawakhana. You are signed in as{' '}
                   <strong>{user?.name ?? 'unknown'}</strong>.
                 </div>
               </div>
@@ -646,7 +646,7 @@ export function SettingsPage() {
 
         <p className="muted row" style={{ fontSize: 'var(--text-xs)', gap: 6, justifyContent: 'center', paddingBottom: 'var(--space-5)' }}>
           <Icon name="pill" size={13} />
-          MediPOS · runs entirely on this machine · no internet needed
+          Dawakhana · runs entirely on this machine · no internet needed
         </p>
       </div>
 
@@ -677,7 +677,7 @@ export function SettingsPage() {
       {restoring !== null && (
         <ConfirmDialog
           title="Replace all shop data?"
-          message="Everything currently in MediPOS — medicines, stock, customers and bills — will be replaced by the contents of this backup file. The current data is copied into server/data/backups first."
+          message="Everything currently in Dawakhana — medicines, stock, customers and bills — will be replaced by the contents of this backup file. The current data is copied into server/data/backups first."
           confirmLabel="Restore backup"
           onConfirm={confirmRestore}
           onCancel={() => setRestoring(null)}

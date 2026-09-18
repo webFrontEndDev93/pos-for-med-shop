@@ -82,14 +82,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('medipos.theme');
+    const saved = localStorage.getItem('dawakhana.theme');
     if (saved === 'light' || saved === 'dark') return saved;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem('medipos.theme', theme);
+    localStorage.setItem('dawakhana.theme', theme);
   }, [theme]);
 
   const toastId = useRef(0);
@@ -156,7 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLock(status.configured ? 'login' : 'setup');
       }
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Could not reach the MediPOS server.');
+      setLoadError(error instanceof Error ? error.message : 'Could not reach the Dawakhana server.');
       setLock('open');
     } finally {
       setReady(true);

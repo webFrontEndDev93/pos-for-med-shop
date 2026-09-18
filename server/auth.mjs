@@ -27,7 +27,7 @@ import { DATA_DIR } from './db.mjs';
  */
 
 const AUTH_FILE = path.join(DATA_DIR, 'auth.json');
-export const COOKIE = 'medipos_session';
+export const COOKIE = 'dawakhana_session';
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;   // a long counter shift
 const ELEVATION_MS = 5 * 60 * 1000;           // long enough to approve a few things

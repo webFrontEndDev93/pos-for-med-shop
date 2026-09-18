@@ -1,4 +1,4 @@
-' MediPOS launcher for Windows.
+' Dawakhana launcher for Windows.
 '
 ' Double-clicking this (or the desktop shortcut that points at it) starts the
 ' till if it is not already running and opens it in its own window — no console
@@ -41,12 +41,12 @@ If Not ServerUp() Then
   If Err.Number <> 0 Then
     On Error GoTo 0
     If bundled Then
-      MsgBox "MediPOS could not start its own copy of Node." & vbCrLf & vbCrLf & _
-             "Antivirus may have blocked or removed this file:" & vbCrLf & nodeExe, 48, "MediPOS"
+      MsgBox "Dawakhana could not start its own copy of Node." & vbCrLf & vbCrLf & _
+             "Antivirus may have blocked or removed this file:" & vbCrLf & nodeExe, 48, "Dawakhana"
     Else
-      MsgBox "MediPOS needs Node.js, which does not seem to be installed." & vbCrLf & vbCrLf & _
+      MsgBox "Dawakhana needs Node.js, which does not seem to be installed." & vbCrLf & vbCrLf & _
              "Install it once from https://nodejs.org (choose the LTS version)," & vbCrLf & _
-             "then open MediPOS again.", 48, "MediPOS"
+             "then open Dawakhana again.", 48, "Dawakhana"
     End If
     WScript.Quit 1
   End If
@@ -60,9 +60,9 @@ If Not ServerUp() Then
 End If
 
 If Not ServerUp() Then
-  MsgBox "MediPOS did not start." & vbCrLf & vbCrLf & _
+  MsgBox "Dawakhana did not start." & vbCrLf & vbCrLf & _
          "Try restarting the computer. If it still will not open, the shop's" & vbCrLf & _
-         "records are safe in:" & vbCrLf & appDir & "\server\data", 16, "MediPOS"
+         "records are safe in:" & vbCrLf & appDir & "\server\data", 16, "Dawakhana"
   WScript.Quit 1
 End If
 

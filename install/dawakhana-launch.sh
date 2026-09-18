@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts MediPOS if it is not already running, then opens it in its own window.
+# Starts Dawakhana if it is not already running, then opens it in its own window.
 # Used by the desktop shortcut on Linux and by the macOS app bundle.
 set -u
 
@@ -17,20 +17,20 @@ case "$(uname -s)-$(uname -m)" in
 esac
 if [ -n "$CANDIDATE" ] && [ -x "$CANDIDATE" ]; then NODE_BIN="$CANDIDATE"; fi
 URL="http://localhost:${PORT}"
-LOG="${APP_DIR}/server/data/medipos.log"
+LOG="${APP_DIR}/server/data/dawakhana.log"
 
 up() { curl -fsS --max-time 2 "${URL}/api/health" >/dev/null 2>&1; }
 
 notify() {
   # Whatever this desktop has: a dialog, a notification, or just the terminal.
-  if command -v zenity >/dev/null 2>&1; then zenity --error --title=MediPOS --text="$1" 2>/dev/null
-  elif command -v osascript >/dev/null 2>&1; then osascript -e "display alert \"MediPOS\" message \"$1\"" >/dev/null 2>&1
+  if command -v zenity >/dev/null 2>&1; then zenity --error --title=Dawakhana --text="$1" 2>/dev/null
+  elif command -v osascript >/dev/null 2>&1; then osascript -e "display alert \"Dawakhana\" message \"$1\"" >/dev/null 2>&1
   else echo "$1" >&2
   fi
 }
 
 if [ "$NODE_BIN" = "node" ] && ! command -v node >/dev/null 2>&1; then
-  notify "MediPOS needs Node.js, which is not installed. Install it once from https://nodejs.org, then open MediPOS again."
+  notify "Dawakhana needs Node.js, which is not installed. Install it once from https://nodejs.org, then open Dawakhana again."
   exit 1
 fi
 
@@ -45,7 +45,7 @@ if ! up; then
 fi
 
 if ! up; then
-  notify "MediPOS did not start. See ${LOG}. The shop's records are safe in ${APP_DIR}/server/data."
+  notify "Dawakhana did not start. See ${LOG}. The shop's records are safe in ${APP_DIR}/server/data."
   exit 1
 fi
 

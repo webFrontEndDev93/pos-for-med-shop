@@ -3,8 +3,8 @@
 
 # Build output
 /dist/
-/medipos-shop/
-/medipos-shop.zip
+/dawakhana-shop/
+/dawakhana-shop.zip
 
 # Node runtimes downloaded to build a self-contained package
 /.node-cache/

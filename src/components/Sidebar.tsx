@@ -36,7 +36,7 @@ export function Sidebar({ route, onNavigate, collapsed, onToggleCollapse }: Side
       <div className="brand">
         <span className="brand-mark"><Icon name="pill" size={18} strokeWidth={2} /></span>
         <div className="brand-text">
-          <div className="brand-name">{settings.shopName || 'MediPOS'}</div>
+          <div className="brand-name">{settings.shopName || 'Dawakhana'}</div>
           <div className="brand-tag">Point of sale</div>
         </div>
       </div>

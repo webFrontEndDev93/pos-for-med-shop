@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="MediPOS — a fast, offline-first point of sale for medicine shops." />
+    <meta name="description" content="Dawakhana — a fast, offline-first point of sale for medicine shops." />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>MediPOS</title>
+    <title>Dawakhana</title>
     <script>
       // Set the theme before first paint so the app never flashes the wrong one.
       (function () {
         try {
-          var saved = localStorage.getItem('medipos.theme');
+          var saved = localStorage.getItem('dawakhana.theme');
           var dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
         } catch (e) {

@@ -24,9 +24,9 @@ export function Receipt({ sale, settings }: { sale: Sale; settings: Settings }) 
     <div className="receipt">
       <div className="receipt-center">
         <div className="receipt-shop">{settings.shopName}</div>
-        <div>{settings.addressLine1}</div>
-        <div>{settings.addressLine2}</div>
-        <div>Ph: {settings.phone}</div>
+        {settings.addressLine1 && <div>{settings.addressLine1}</div>}
+        {settings.addressLine2 && <div>{settings.addressLine2}</div>}
+        {settings.phone && <div>Ph: {settings.phone}</div>}
         {settings.drugLicense && <div>DL No: {settings.drugLicense}</div>}
         {settings.ntn && <div>NTN: {settings.ntn}</div>}
         {settings.strn && <div>STRN: {settings.strn}</div>}

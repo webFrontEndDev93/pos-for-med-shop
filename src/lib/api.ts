@@ -28,7 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: init?.body ? { 'content-type': 'application/json' } : undefined,
     });
   } catch {
-    throw new ApiError(0, 'Cannot reach the MediPOS server. Is it still running?');
+    throw new ApiError(0, 'Cannot reach the Dawakhana server. Is it still running?');
   }
 
   const text = await response.text();

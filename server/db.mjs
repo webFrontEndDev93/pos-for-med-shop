@@ -28,17 +28,20 @@ export function emptyDb() {
   return {
     version: 1,
     settings: {
-      shopName: 'MediPOS Pharmacy',
-      addressLine1: 'Shop 14, Jinnah Super Market',
-      addressLine2: 'F-7 Markaz, Islamabad',
-      phone: '+92 51 234 5678',
-      email: 'care@medipos.example',
-      // Left blank on purpose: the receipt omits an empty tax number rather
-      // than printing a made-up one. Fill in your own from Settings.
+      // Every field a receipt prints starts blank or as an obvious placeholder,
+      // and the receipt omits the blanks rather than printing something made up.
+      // A drug licence number and a pharmacist's name are claims the shop makes
+      // to its customers and its regulator; shipping plausible-looking ones
+      // invites a shop to print somebody else's by simply not opening Settings.
+      shopName: 'Your Pharmacy',
+      addressLine1: '',
+      addressLine2: '',
+      phone: '',
+      email: '',
       ntn: '',
       strn: '',
-      drugLicense: 'ISB-2024-4471',
-      pharmacist: 'Dr. A. Khan, Pharm-D',
+      drugLicense: '',
+      pharmacist: '',
       currency: 'PKR',
       currencySymbol: 'Rs',
       invoicePrefix: 'INV',

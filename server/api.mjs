@@ -676,7 +676,7 @@ export const routes = [
   }, 'admin'],
   ['GET', '/api/backups', () => listBackups(), 'admin'],
   ['POST', '/api/restore', async (_p, body) => {
-    if (!body || !Array.isArray(body.products)) throw bad('That file does not look like a MediPOS backup.');
+    if (!body || !Array.isArray(body.products)) throw bad('That file does not look like a Dawakhana backup.');
     await replaceDb(body);
     return { ok: true };
   }, 'admin'],

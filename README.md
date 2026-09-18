@@ -1,4 +1,4 @@
-# MediPOS
+# Dawakhana
 
 A lightweight, offline-first point of sale for a medicine shop. Fast keyboard-driven
 billing, batch and expiry tracking, customer udhaar, and a reports dashboard — all
@@ -11,7 +11,7 @@ running on one machine with no internet connection and no database server.
 A pharmacy counter has particular needs that a generic POS gets wrong:
 
 - **Stock lives on batches, not products.** The same medicine arrives in batches with
-  different expiry dates, MRPs and purchase costs. MediPOS tracks every batch
+  different expiry dates, MRPs and purchase costs. Dawakhana tracks every batch
   separately and defaults each sale to the batch expiring soonest (FEFO), so old stock
   clears before it lapses.
 - **Expired medicine must not be sellable.** Expired batches are hidden from the till
@@ -39,8 +39,8 @@ up on a real till: build, copy, start at boot, kiosk window, backups and the rec
 printer, step by step.
 
 The short version: `npm run package -- --with-node=win-x64` produces
-**`medipos-shop.zip`** (~34 MB) with an official, checksum-verified Node runtime
-inside. The shop unzips it, double-clicks one `SETUP` file, and gets a **MediPOS icon
+**`dawakhana-shop.zip`** (~34 MB) with an official, checksum-verified Node runtime
+inside. The shop unzips it, double-clicks one `SETUP` file, and gets a **Dawakhana icon
 on the desktop** that opens the till in its own window — **nothing to install, no
 internet, no terminal**. Drop `--with-node` for a ~270 KB package that uses a Node
 already on the machine.
@@ -85,7 +85,7 @@ Open <http://localhost:5173>. Vite proxies `/api` through to the Node server.
 | `npm run seed` | Overwrite the database with a fresh starter catalogue |
 | `npm run seed:demo` | Overwrite it with the invented demo shop instead |
 | `npm run typecheck` | TypeScript only, no build |
-| `npm run package` | Build `medipos-shop.zip` for the shop (add `-- --with-node=win-x64` to bundle Node) |
+| `npm run package` | Build `dawakhana-shop.zip` for the shop (add `-- --with-node=win-x64` to bundle Node) |
 
 Set `PORT` to move the server, and `POS_DATA_DIR` to keep the data somewhere else
 (a synced folder, for example).
@@ -175,7 +175,7 @@ distinguished by line style and written labels as well as hue.
 
 ## Who is on the till
 
-Everyone gets their **own passcode**, and that passcode is how MediPOS knows who they
+Everyone gets their **own passcode**, and that passcode is how Dawakhana knows who they
 are — so every bill records who rang it up. Each person is an **owner** or on the
 **counter**:
 
@@ -213,7 +213,7 @@ rang up keep their name, because an audit trail that changes retroactively is no
 
 ### Manager override
 
-Staff are not left at a dead end. When the counter hits something owner-only, MediPOS
+Staff are not left at a dead end. When the counter hits something owner-only, Dawakhana
 asks for an **owner passcode** right there; the owner walks over, types it, and the
 action goes through. Nobody signs out mid-queue.
 
@@ -236,7 +236,7 @@ that is only a courtesy: a staff session that replays a request or types a URL g
   refused while locked out, so the lockout cannot be walked around.
 - Only owners can manage people — otherwise staff could promote themselves.
 - Changing someone's passcode, or switching them off, signs them out immediately.
-- Sessions live in memory and last a shift. Restarting MediPOS signs the counter out.
+- Sessions live in memory and last a shift. Restarting Dawakhana signs the counter out.
 - Forgot the owner passcode? Delete `server/data/auth.json` and restart to start again.
 - `POS_AUTH=off` disables the gate entirely, for development or a one-person shop.
 
@@ -251,7 +251,7 @@ machine alone.
 
 ![Automatic backups in Settings](docs/screens/backups.png)
 
-**Settings → Automatic backups.** A dated copy is written when MediPOS starts and then
+**Settings → Automatic backups.** A dated copy is written when Dawakhana starts and then
 on a schedule you set, with old copies pruned to a limit.
 
 **Point the backup folder at a USB stick or a synced folder.** A backup that only

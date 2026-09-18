@@ -476,9 +476,15 @@ table.data th.right { text-align: right; }
 @keyframes shimmer { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
 
 .boot {
-  display: grid; place-items: center; height: 100dvh; gap: var(--space-4);
+  display: flex; flex-direction: column; align-items: center;
+  height: 100dvh; overflow-y: auto; gap: var(--space-4); padding: var(--space-5);
   background: var(--bg); color: var(--text-muted);
 }
+/* Auto margins centre the contents while there is room and collapse to zero
+   when there is not, so a long error message stays scrollable to the end. */
+.boot > * { flex-shrink: 0; }   /* a column flex child shrinks by default; let it overflow and scroll instead */
+.boot > :first-child { margin-top: auto; }
+.boot > :last-child { margin-bottom: auto; }
 .spinner {
   width: 1.75rem; height: 1.75rem; border-radius: 50%;
   border: 2.5px solid var(--border-strong); border-top-color: var(--brand);

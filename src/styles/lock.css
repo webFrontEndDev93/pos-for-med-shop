@@ -1,7 +1,12 @@
 .lock {
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
+  /* The card is taller than a 1366x768 shop laptop, and body is overflow:hidden
+     for the app shell, so this has to scroll itself. Centring with auto margins
+     rather than place-items: centre matters — a centred grid or flex item that
+     overflows pushes its own top out of the scroll range, which is how the
+     bottom of this card became unreachable in the first place. */
+  display: flex;
+  height: 100dvh;
+  overflow-y: auto;
   padding: var(--space-5);
   background:
     radial-gradient(circle at 20% 0%, hsl(var(--brand-h) 50% 50% / 0.10), transparent 45%),
@@ -11,6 +16,8 @@
 
 .lock-card {
   width: min(24rem, 100%);
+  margin: auto;            /* centres when there is room, never clips when there is not */
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

@@ -96,14 +96,9 @@ const isoDay = (offsetDays) => {
   return d.toISOString().slice(0, 10);
 };
 
-export function buildSeed() {
-  const rand = rng();
-  const pick = (arr) => arr[Math.floor(rand() * arr.length)];
-  const between = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
-
-  const db = emptyDb();
-
-  const products = CATALOGUE.map(
+/** The shelf itself, which is the same whichever way a shop starts. */
+function buildProducts(rand, between) {
+  return CATALOGUE.map(
     ([name, genericName, manufacturer, category, form, strength, packSize, taxRate, mrp, rx]) => ({
       id: id('prd'),
       name,
@@ -125,6 +120,20 @@ export function buildSeed() {
       _mrp: mrp,
     }),
   );
+}
+
+/**
+ * A shop mid-life: stock on the shelves, regulars on the books and ten weeks of
+ * trade behind it. This is for looking at the app, not for opening one — every
+ * number in it is invented. Reach it with --demo.
+ */
+export function buildDemo() {
+  const rand = rng();
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)];
+  const between = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
+
+  const db = emptyDb();
+  const products = buildProducts(rand, between);
 
   const batches = [];
   for (const product of products) {
@@ -285,15 +294,58 @@ export function buildSeed() {
   return db;
 }
 
-/** Writes demo data only when there is no database yet (or --force is passed). */
+/**
+ * What a new shop actually opens with: the catalogue, and one empty batch per
+ * medicine holding a starting price. No customers, no bills, no takings —
+ * those belong to whoever trades here, not to a demo.
+ *
+ * The batches are priced but carry no stock on purpose. Nothing can be sold
+ * from a batch with no quantity, so the first thing anyone does with a medicine
+ * is open its batch and enter what is on the shelf — which is the same moment
+ * they replace the OPENING placeholder with the real batch number and expiry.
+ * A count nobody counted never reaches a report that way, and no expiry alert
+ * fires for a box the shop never bought.
+ */
+export function buildStarter() {
+  const rand = rng();
+  const between = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
+
+  const db = emptyDb();
+  const products = buildProducts(rand, between);
+
+  const batches = products.map((product) => ({
+    id: id('bch'),
+    productId: product.id,
+    batchNo: 'OPENING',
+    expiry: isoDay(730),
+    mrp: round2(product._mrp),
+    salePrice: round2(product._mrp),
+    costPrice: round2(product._mrp * 0.78),
+    quantity: 0,
+    supplier: '',
+    receivedAt: isoDay(0),
+    createdAt: new Date().toISOString(),
+  }));
+  for (const product of products) delete product._mrp;
+
+  db.products = products;
+  db.batches = batches;
+  return db;
+}
+
+/**
+ * Writes the starting data only when there is no database yet, or when --force
+ * is passed. --demo asks for the invented shop instead of a clean catalogue.
+ */
 export function ensureSeed() {
   const force = process.argv.includes('--force');
+  const demo = process.argv.includes('--demo');
   const exists = fs.existsSync(DB_FILE);
   if (exists && !force) {
     const db = readDb();
     if (db.products.length > 0) return false;
   }
-  const seeded = buildSeed();
+  const seeded = demo ? buildDemo() : buildStarter();
   resetCache();
   // Returned, not fired and forgotten: the caller awaits this so a data folder
   // it cannot write to becomes a clear startup message rather than an
@@ -302,7 +354,9 @@ export function ensureSeed() {
     Object.assign(db, seeded);
   }).then(() => {
     console.log(
-      `[seed] demo shop ready — ${seeded.products.length} medicines, ${seeded.batches.length} batches, ${seeded.sales.length} bills, ${seeded.payments.length} credit settlements.`,
+      demo
+        ? `[seed] demo shop ready — ${seeded.products.length} medicines, ${seeded.batches.length} batches, ${seeded.sales.length} bills, ${seeded.payments.length} credit settlements.`
+        : `[seed] starter catalogue ready — ${seeded.products.length} medicines priced, no stock, no customers, no sales. Enter what is on the shelf to begin.`,
     );
     return true;
   });

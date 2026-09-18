@@ -15,6 +15,7 @@
     "preview": "vite preview",
     "start": "node server/index.mjs",
     "seed": "node server/seed.mjs --force",
+    "seed:demo": "node server/seed.mjs --force --demo",
     "typecheck": "tsc -b --noEmit",
     "package": "node scripts/package.mjs"
   },

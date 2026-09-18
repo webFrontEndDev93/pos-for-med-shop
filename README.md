@@ -23,7 +23,7 @@ A pharmacy counter has particular needs that a generic POS gets wrong:
   single line — Pakistan levies one federal sales tax, not a split.
 - **The tax rate belongs to the product.** Drugs registered under the Drugs Act 1976
   attract a concessional rate, while devices, cosmetics and general consumables sit at
-  the standard rate, so a single shop-wide rate would be wrong. The demo data ships
+  the standard rate, so a single shop-wide rate would be wrong. The starting catalogue ships
   registered medicines at 1% and non-drug lines at 18%.
 - **Regulars buy on udhaar.** Bills can be part-paid or fully deferred to a customer's
   account, with a ledger and settlement flow.
@@ -56,11 +56,18 @@ npm run build     # compile the frontend into dist/
 npm start         # serve the app and API on http://localhost:4173
 ```
 
-The first run seeds a demo shop — 50 medicines from a Pakistani shelf (Panadol,
-Augmentin, Risek, Ventolin, Surbex Z and so on), their batches, 12 customers and about
-three months of trade — so every screen has something real to show. Delete
-`server/data/db.json` and restart to begin from empty, or run `npm run seed` to reset
-the demo data.
+The first run writes a **starter catalogue**: 50 medicines from a Pakistani shelf
+(Panadol, Augmentin, Risek, Ventolin, Surbex Z and so on), each priced, each with one
+batch marked `OPENING` that holds no stock. No customers, no bills, no takings — a real
+shop's records belong to that shop. Nothing is sellable until someone enters what is on
+the shelf, which is deliberate: a till that ships with invented stock counts is worse
+than one that ships with none.
+
+For looking around the app rather than opening a shop, `npm run seed:demo` replaces that
+with a shop mid-life — stocked batches, 12 customers and about three months of trade, so
+the reports and alerts have something to show. Every number in it is invented; never
+hand it to a shop. Delete `server/data/db.json` and restart to go back to the starter
+catalogue, or run `npm run seed` to reset it.
 
 ### Development
 
@@ -75,7 +82,8 @@ Open <http://localhost:5173>. Vite proxies `/api` through to the Node server.
 | `npm run dev` | API and hot-reloading UI together |
 | `npm run build` | Typecheck, then build the production bundle into `dist/` |
 | `npm start` | Serve the built app and the API from one process |
-| `npm run seed` | Overwrite the database with fresh demo data |
+| `npm run seed` | Overwrite the database with a fresh starter catalogue |
+| `npm run seed:demo` | Overwrite it with the invented demo shop instead |
 | `npm run typecheck` | TypeScript only, no build |
 | `npm run package` | Build `medipos-shop.zip` for the shop (add `-- --with-node=win-x64` to bundle Node) |
 
@@ -138,7 +146,7 @@ server/          zero-dependency Node HTTP server
   api.mjs        REST routes, checkout and reporting logic
   domain.mjs     pricing and stock rules
   db.mjs         JSON file store with atomic writes
-  seed.mjs       demo data generator
+  seed.mjs       starter catalogue and demo data generator
   data/db.json   the entire shop (created on first run)
 src/             React 19 + TypeScript frontend
   pages/         one file per screen

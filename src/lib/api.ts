@@ -47,6 +47,33 @@ const put = <T>(path: string, body: unknown) =>
   request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 const del = <T>(path: string) => request<T>(path, { method: 'DELETE' });
 
+export interface ImportPreviewRow {
+  line: number;
+  name: string;
+  action: 'create' | 'update' | 'error';
+  matchedBy: string | null;
+  unit: string;
+  errors: string[];
+  stockBefore: number;
+  stockAfter: number;
+  addingLabel: string;
+}
+
+export interface ImportPreview {
+  creates: number;
+  updates: number;
+  failed: number;
+  rows: ImportPreviewRow[];
+}
+
+export interface ImportResult {
+  rows: number;
+  created: number;
+  updated: number;
+  lots: number;
+  summary: string;
+}
+
 export interface CheckoutPayload {
   items: { batchId: string; qty: number; discountPct: number }[];
   extraDiscount: number;
@@ -135,6 +162,11 @@ export const api = {
 
   settings: () => request<Settings>('/settings'),
   updateSettings: (body: Partial<Settings>) => put<Settings>('/settings', body),
+
+  importPreview: (rows: Record<string, string>[]) =>
+    post<ImportPreview>('/import/preview', { rows }),
+  importRows: (rows: Record<string, string>[]) =>
+    post<ImportResult>('/import', { rows }),
 
   backup: () => request<unknown>('/backup'),
   restore: (body: unknown) => post<{ ok: true }>('/restore', body),

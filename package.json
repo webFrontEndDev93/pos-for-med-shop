@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Dawakhana \u2014 a lightweight, offline-first point of sale for medicine shops.",
+  "description": "Dawakhana — a lightweight, offline-first point of sale for medicine shops.",
   "engines": {
     "node": ">=20"
   },
@@ -17,6 +17,7 @@
     "seed": "node server/seed.mjs --force",
     "seed:demo": "node server/seed.mjs --force --demo",
     "typecheck": "tsc -b --noEmit",
+    "check:import": "node scripts/check-spreadsheet.mjs",
     "package": "node scripts/package.mjs"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.1.0",
     "concurrently": "^9.2.1",
+    "playwright-core": "^1.63.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.7"
   }

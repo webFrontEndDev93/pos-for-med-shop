@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { Badge, Button, ConfirmDialog, EmptyState, Stat } from '../components/ui';
 import { useAdminAction } from '../components/AdminGate';
 import { ProductForm } from '../components/ProductForm';
+import { ImportWizard } from '../components/ImportWizard';
 import { BatchForm } from '../components/BatchForm';
 import '../styles/pages.css';
 
@@ -44,6 +45,7 @@ export function Inventory() {
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [addingProduct, setAddingProduct] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [batchTarget, setBatchTarget] = useState<{ product: Product; batch: Batch | null } | null>(null);
   const [deleting, setDeleting] = useState<{ kind: 'product' | 'batch'; id: string; label: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -147,6 +149,9 @@ export function Inventory() {
           </p>
         </div>
         <div className="row">
+          <Button icon="upload" onClick={guard('import a stock list', () => setImporting(true))}>
+            Import
+          </Button>
           <Button
             icon={isAdmin ? 'plus' : 'shield'}
             variant="primary"
@@ -483,6 +488,8 @@ export function Inventory() {
       </div>
 
       {gate}
+
+      {importing && <ImportWizard onClose={() => setImporting(false)} />}
 
       {(addingProduct || editingProduct) && (
         <ProductForm

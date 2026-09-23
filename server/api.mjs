@@ -1,5 +1,6 @@
 import { readDb, writeDb, replaceDb, id, DEFAULT_TAX_RATES } from './db.mjs';
 import { runBackup, listBackups } from './backup.mjs';
+import { planImport, applyImport, MAX_IMPORT_ROWS } from './import.mjs';
 import {
   listUsers, createUser, updateUser, deleteUser, destroySessionsFor,
 } from './auth.mjs';
@@ -413,6 +414,13 @@ function alerts(db) {
   };
 }
 
+/**
+ * The validators handed to the import module. Naming them here keeps the import
+ * honest: it can only build a medicine or a batch the same way the ordinary
+ * Add Medicine and Receive Stock routes do.
+ */
+const IMPORT_DEPS = { product: productPayload, batch: batchPayload, audit, bad };
+
 /* -------------------------------------------------------------------- routes */
 
 /**
@@ -427,6 +435,26 @@ function alerts(db) {
  */
 export const routes = [
   ['GET', '/api/health', () => ({ ok: true, at: new Date().toISOString() })],
+
+  ['POST', '/api/import/preview', (_p, body) => {
+    const db = readDb();
+    const rows = Array.isArray(body?.rows) ? body.rows : [];
+    if (rows.length > MAX_IMPORT_ROWS) {
+      throw bad(`That file has ${rows.length} rows; the most that can be previewed at once is ${MAX_IMPORT_ROWS}.`);
+    }
+    const plan = planImport(db, rows, IMPORT_DEPS);
+    // The payloads themselves are internal; the screen only needs the verdict.
+    return {
+      creates: plan.creates,
+      updates: plan.updates,
+      failed: plan.failed,
+      rows: plan.plans.map(({ productPayload: _pp, batchPayload: _bp, ...rest }) => rest),
+    };
+  }, 'admin'],
+
+  ['POST', '/api/import', (_p, body, _q, ctx) =>
+    writeDb((db) => applyImport(db, Array.isArray(body?.rows) ? body.rows : [], ctx?.actor, IMPORT_DEPS)),
+    'admin'],
 
   ['GET', '/api/bootstrap', () => {
     const db = readDb();

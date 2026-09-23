@@ -58,6 +58,38 @@ scripts/    package.mjs builds dawakhana-shop/ and the zip
   time-boxed. An unplugged USB stick makes `fs` calls hang rather than fail, and
   a hung call freezes the till.
 
+## Importing a stock list
+
+Both tills read an Excel (.xlsx) or CSV file from **Inventory → Import**, owner
+only. The spreadsheet is parsed in the browser by `src/lib/spreadsheet.ts`,
+which is a hand-rolled reader — an .xlsx is a zip of XML, and the browser
+already has DecompressionStream and DOMParser. No library, no change to the
+package size, and the shop sees a preview of its own file before anything is
+written.
+
+Rules worth not relitigating:
+
+- **The server revalidates every row** through the same payload validators the
+  ordinary Add and Receive Stock routes use (`IMPORT_DEPS` in `api.mjs`). The
+  browser's preview is a convenience, never the authority.
+- **All or nothing.** One bad row refuses the whole import and names the row. A
+  half-applied import cannot be unpicked, and re-running it would double what
+  landed.
+- **Never blank a field the sheet did not mention.** An update merges onto the
+  existing record, so a price list with two columns cannot wipe categories.
+- **Matching is barcode, then exact name.** Nothing fuzzier: a near-match that
+  guesses wrong reprices a different product and nobody notices.
+- **An import adds stock, it does not replace it.** The preview shows
+  `25.5 kg → 51 kg` and warns when rows already have stock, so importing the
+  same file twice is visible before it is committed rather than after.
+
+Fixtures for testing the reader live in `scripts/import-fixtures/`. They were
+written by openpyxl and xlsxwriter — two independent writers, covering inline
+strings and the shared string table — plus one hand-built file for the paths
+neither produces (cached formula values, booleans, the 1900 leap-year bug,
+sparse columns). Check them with `node scripts/check-spreadsheet.mjs`, which
+needs Playwright and a browser.
+
 ## Verifying
 
 Reproduce before fixing, and prove the failure path, not just the happy one.
